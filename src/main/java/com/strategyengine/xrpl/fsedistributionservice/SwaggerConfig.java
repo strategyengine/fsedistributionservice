@@ -34,12 +34,12 @@ public class SwaggerConfig {
 	}
 
 	private Predicate<String> postPaths() {
-		return or(regex("/api/posts.*"), regex("/api/assetpriceservice.*"));
+		return or(regex("/api/posts.*"), regex("/api/fsedistributionservice.*"));
 	}
 
 	private ApiInfo apiInfo() {
-		return new ApiInfoBuilder().title("assetpriceservice API")
-				.description("assetpriceservice API reference for developers").license("assetpriceservice License")
+		return new ApiInfoBuilder().title("fsedistributionservice API")
+				.description("fsedistributionservice API reference for developers").license("fsedistributionservice License")
 				.version("1.0").build();
 	}
 

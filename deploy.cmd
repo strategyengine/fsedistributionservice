@@ -1,1 +1,1 @@
-mvn clean compile install && docker build -t assetpriceservice . &&  docker tag assetpriceservice gcr.io/flarestrategyengine/assetpriceservice && docker push gcr.io/flarestrategyengine/assetpriceservice
+mvn clean compile install && docker build -t fsedistributionservice . &&  docker tag fsedistributionservice gcr.io/flarestrategyengine/fsedistributionservice && docker push gcr.io/flarestrategyengine/fsedistributionservice
