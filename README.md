@@ -16,7 +16,7 @@ send payments to all addresses configured for a trustline.    (This is the one y
 get trustlines for an address
 
 
-#To start: Run FseDistributionServiceApplication and navigate to where you will see the swagger page and you call call the endpoints directly
+#To start: Run FseDistributionServiceApplication and navigate to the swagger page and you can call the endpoints directly
 http://localhost:8080
 
 
