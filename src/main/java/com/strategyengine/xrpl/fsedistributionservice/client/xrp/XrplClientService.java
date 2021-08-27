@@ -1,5 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
+import java.util.List;
+
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
 
@@ -11,7 +13,7 @@ public interface XrplClientService {
 
 	AccountLinesResult getTrustLines(String classicAddress) throws Exception;
 
-	String sendFSEPayment(FsePaymentRequest paymentRequest) throws Exception;
+	List<String> sendFSEPayment(FsePaymentRequest paymentRequest) throws Exception;
 
 }
 

@@ -100,11 +100,11 @@ public class XrplServiceImplTest {
 
 		FsePaymentRequest payment = fsepayment();
 
-		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(message);
+		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(ImmutableList.of(message));
 
 		FsePaymentResult actual = sut.sendFsePayment(payment);
 
-		Assertions.assertEquals(FsePaymentResult.builder().responseMessage(message).build(), actual);
+		Assertions.assertEquals(FsePaymentResult.builder().responseMessages(ImmutableList.of(message)).build(), actual);
 
 	}
 
@@ -115,7 +115,7 @@ public class XrplServiceImplTest {
 		String signingKey = "ED123";
 		String issuerAddress = "trusty";
 		String currencyName = "FSE";
-		return FsePaymentRequest.builder().fromSigningPublicKey(signingKey).toClassicAddress(toAddress)
+		return FsePaymentRequest.builder().fromSigningPublicKey(signingKey).toClassicAddresses(ImmutableList.of(toAddress))
 				.fromPrivateKey(fromPrivateKey).fromClassicAddress(classicAddress)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).amount(amount).build();
 	}
@@ -134,7 +134,7 @@ public class XrplServiceImplTest {
 
 		Mockito.when(xrplClientService.getTrustLines(issuerAddress)).thenReturn(accountLinesResult());
 
-		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(message);
+		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(ImmutableList.of(message));
 
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)
@@ -142,7 +142,7 @@ public class XrplServiceImplTest {
 
 		List<FsePaymentResult> actual = sut.sendFsePaymentToTrustlines(request);
 
-		Assertions.assertEquals(ImmutableList.of(FsePaymentResult.builder().responseMessage(message).build()), actual);
+		Assertions.assertEquals(ImmutableList.of(FsePaymentResult.builder().responseMessages(ImmutableList.of(message)).build()), actual);
 
 	}
 

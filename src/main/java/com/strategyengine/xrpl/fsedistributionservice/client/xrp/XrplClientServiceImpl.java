@@ -1,6 +1,8 @@
 package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,7 +39,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	@Autowired
 	private XrplClient xrplClient;
-	
+
 	private long paymentCounter = 0;
 
 	@Override
@@ -60,10 +62,10 @@ public class XrplClientServiceImpl implements XrplClientService {
 		Marker marker = null;
 		while (pageResult == null || !pageResult.lines().isEmpty()) {
 
-			if(pageResult!=null && marker==null) {
+			if (pageResult != null && marker == null) {
 				break;
 			}
-			
+
 			AccountLinesRequestParams requestParams = null;
 			if (marker != null) {
 				requestParams = AccountLinesRequestParams.builder().marker(marker).account(address)
@@ -73,13 +75,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 						.limit(UnsignedInteger.valueOf(100000)).build();
 			}
 
-
 			pageResult = xrplClient.accountLines(requestParams);
 
 			if (result == null) {
 				result = pageResult;
 			} else {
-				result = AccountLinesResult.builder().account(result.account()).addAllLines(pageResult.lines()).addAllLines(result.lines()).ledgerCurrentIndex(pageResult.ledgerCurrentIndex())
+				result = AccountLinesResult.builder().account(result.account()).addAllLines(pageResult.lines())
+						.addAllLines(result.lines()).ledgerCurrentIndex(pageResult.ledgerCurrentIndex())
 						.marker(pageResult.marker()).build();
 			}
 
@@ -91,73 +93,86 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public String sendFSEPayment(FsePaymentRequest paymentRequest) throws Exception {
+	public List<String> sendFSEPayment(FsePaymentRequest paymentRequest) {
 
-		String fromClassicAddress = paymentRequest.getFromClassicAddress();
-		String toClassicAddress = paymentRequest.getToClassicAddress();
-		String amount = paymentRequest.getAmount();
-		String privateKeyStr = paymentRequest.getFromPrivateKey();
-		String destinationTag = paymentRequest.getDestinationTag();
+		return paymentRequest.getToClassicAddresses().stream().map(a -> sendFSEPayment(paymentRequest, a))
+				.collect(Collectors.toList());
+	}
 
-		AccountInfoResult fromAccount = getAccountInfo(fromClassicAddress);
+	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress) {
 
-		// Request current fee information from rippled
-		final FeeResult feeResult = waitForReasonableFee();
-		final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
+		try {
+			String fromClassicAddress = paymentRequest.getFromClassicAddress();
+			String amount = paymentRequest.getAmount();
+			String privateKeyStr = paymentRequest.getFromPrivateKey();
+			String destinationTag = paymentRequest.getDestinationTag();
 
-		if(openLedgerFee.toXrp().compareTo(new BigDecimal(".0002"))>0) {
-			log.warn("Fee is too high! " + openLedgerFee.toXrp());
-		}
-		
-		// Construct a Payment
-		// Workaround for https://github.com/XRPLF/xrpl4j/issues/84
-		final LedgerIndex validatedLedger = xrplClient
-				.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
-				.orElseThrow(() -> new RuntimeException("LedgerIndex not available."));
+			AccountInfoResult fromAccount = getAccountInfo(fromClassicAddress);
 
-		final UnsignedInteger lastLedgerSequence = UnsignedInteger
-				.valueOf(validatedLedger.plus(UnsignedLong.valueOf(4)).unsignedLongValue().intValue()); // <--
-																										// LastLedgerSequence
-																										// is the
-																										// current
-																										// ledger index
-																										// + 4
+			// Request current fee information from rippled
+			final FeeResult feeResult = waitForReasonableFee();
+			final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
 
-		Payment payment = Payment.builder().account(Address.of(fromClassicAddress))
-				.amount(IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName()).issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress()))
-						.value(amount).build())
-				.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
-				.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
-				.lastLedgerSequence(lastLedgerSequence).build();
-		
-		if(destinationTag!=null) {
-			payment = Payment.builder().account(Address.of(fromClassicAddress))
-					.amount(IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName()).issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress()))
-							.value(amount).build())
+			if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
+				log.warn("Fee is too high! " + openLedgerFee.toXrp());
+			}
+
+			// Construct a Payment
+			// Workaround for https://github.com/XRPLF/xrpl4j/issues/84
+			final LedgerIndex validatedLedger = xrplClient
+					.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
+					.orElseThrow(() -> new RuntimeException("LedgerIndex not available."));
+
+			final UnsignedInteger lastLedgerSequence = UnsignedInteger
+					.valueOf(validatedLedger.plus(UnsignedLong.valueOf(4)).unsignedLongValue().intValue()); // <--
+																											// LastLedgerSequence
+																											// is the
+																											// current
+																											// ledger
+																											// index
+																											// + 4
+
+			Payment payment = Payment.builder().account(Address.of(fromClassicAddress))
+					.amount(IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName())
+							.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount)
+							.build())
 					.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
 					.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
-					.lastLedgerSequence(lastLedgerSequence).destinationTag(UnsignedInteger.valueOf(destinationTag)).build();
-					
-					
+					.lastLedgerSequence(lastLedgerSequence).build();
+
+			if (destinationTag != null) {
+				payment = Payment.builder().account(Address.of(fromClassicAddress))
+						.amount(IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName())
+								.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount)
+								.build())
+						.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
+						.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
+						.lastLedgerSequence(lastLedgerSequence).destinationTag(UnsignedInteger.valueOf(destinationTag))
+						.build();
+
+			}
+
+			// Construct a SignatureService to sign the Payment
+			PrivateKey privateKey = PrivateKey.fromBase16EncodedPrivateKey(privateKeyStr);
+			SignatureService signatureService = new SingleKeySignatureService(privateKey);
+
+			// Sign the Payment
+			final SignedTransaction<Payment> signedPayment = signatureService.sign(KeyMetadata.EMPTY, payment);
+
+			final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
+			paymentCounter++;
+			log.info(submitResult.engineResultMessage() + "- payment to" + toClassicAddress + " FSE amount:" + amount
+					+ " XRP fee:" + openLedgerFee.toXrp() + " total payments: " + paymentCounter);
+
+			if ("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
+				paymentRequest.setDestinationTag("589");
+				return sendFSEPayment(paymentRequest, toClassicAddress);
+			}
+			return submitResult.result();
+		} catch (Exception e) {
+			log.error("Error sending payment to address" + toClassicAddress, e);
+			return "FAILED to pay " + toClassicAddress ;
 		}
-
-		// Construct a SignatureService to sign the Payment
-		PrivateKey privateKey = PrivateKey.fromBase16EncodedPrivateKey(privateKeyStr);
-		SignatureService signatureService = new SingleKeySignatureService(privateKey);
-
-		// Sign the Payment
-		final SignedTransaction<Payment> signedPayment = signatureService.sign(KeyMetadata.EMPTY, payment);
-
-		final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
-		paymentCounter++;
-		log.info(submitResult.engineResultMessage() + "- payment to" + toClassicAddress + " FSE amount:" + amount + " XRP fee:" + openLedgerFee.toXrp() + " total payments: " + paymentCounter);
-		 
-		if("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
-			paymentRequest.setDestinationTag("589");
-			return sendFSEPayment(paymentRequest);
-		}
-		return submitResult.result();
-		 
 
 	}
 
@@ -166,7 +181,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 		final FeeResult feeResult = xrplClient.fee();
 		final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
 
-		if(openLedgerFee.toXrp().compareTo(new BigDecimal(".0002"))>0) {
+		if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
 			log.warn("Waiting Fee is too high! " + openLedgerFee.toXrp());
 			Thread.sleep(1000);
 			return waitForReasonableFee();

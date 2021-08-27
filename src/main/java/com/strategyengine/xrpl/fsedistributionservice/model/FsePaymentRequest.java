@@ -1,5 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -25,7 +27,7 @@ public class FsePaymentRequest {
 	@NonNull
 	private String fromPrivateKey;
 	@NonNull
-	private String toClassicAddress;
+	private List<String> toClassicAddresses;
 	@NonNull
 	private String amount;
 	//nullable
@@ -38,4 +40,5 @@ public class FsePaymentRequest {
 	//FSE
 	@NonNull
 	private String currencyName;
+
 }

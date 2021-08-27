@@ -9,6 +9,7 @@ import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
@@ -57,9 +58,9 @@ public class XrplServiceImpl implements XrplService {
 	@Override
 	public FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest) {
 		try {
-			String responseMessage = xrplClientService.sendFSEPayment(paymentRequest);
+			List<String> responseMessage = xrplClientService.sendFSEPayment(paymentRequest);
 
-			return FsePaymentResult.builder().responseMessage(responseMessage).build();
+			return FsePaymentResult.builder().responseMessages(responseMessage).build();
 		} catch (Exception e) {
 			log.error("Error sending payment to " + paymentRequest, e);
 		}
@@ -80,11 +81,15 @@ public class XrplServiceImpl implements XrplService {
 								.currencyName(p.getCurrencyName()).amount(p.getAmount())
 								.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
 								.fromSigningPublicKey(p.getFromSigningPublicKey())
-								.toClassicAddress(t.getClassicAddress()).build()))
+								.toClassicAddresses(asList(t.getClassicAddress()))
+								.build()))
 				.collect(Collectors.toList());
 
 		return results;
 
 	}
 
+	private List<String> asList(String i){
+		return ImmutableList.of(i);
+	}
 }
