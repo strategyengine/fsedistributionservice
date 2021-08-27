@@ -34,11 +34,12 @@ public class TrustlineTriggerDropServiceImpl implements TrustlineTriggerDropServ
 
 	@VisibleForTesting
 	protected void triggerDrop(List<FseTrustLine> trustLines, FsePaymentTrustlinesMinTriggeredRequest req, int sleepWindow) {
-		
+
 		if(trustLines.size() >= req.getMinTrustLinesTriggerValue()) {
-			//we've got enough trustlines!!   AIRDROP IT!
+			log.info("We've got enough trustlines to trigger!!   AIRDROP IT!");
 			xrplService.sendFsePaymentToTrustlines(req.getTrustlinePaymentRequest());
 		} else {
+			log.info("Not enought trustlines to send the triggered airdrop.  Total trustlines" + trustLines.size());
 			try {
 				Thread.sleep(sleepWindow);
 			}catch(Exception e) {
