@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.xrpl.xrpl4j.client.XrplClient;
+import org.xrpl.xrpl4j.codec.addresses.exceptions.EncodingFormatException;
 import org.xrpl.xrpl4j.crypto.KeyMetadata;
 import org.xrpl.xrpl4j.crypto.PrivateKey;
 import org.xrpl.xrpl4j.crypto.signing.SignatureService;
@@ -156,9 +157,14 @@ public class XrplClientServiceImpl implements XrplClientService {
 			PrivateKey privateKey = PrivateKey.fromBase16EncodedPrivateKey(privateKeyStr);
 			SignatureService signatureService = new SingleKeySignatureService(privateKey);
 
+			final SignedTransaction<Payment> signedPayment;
 			// Sign the Payment
-			final SignedTransaction<Payment> signedPayment = signatureService.sign(KeyMetadata.EMPTY, payment);
-
+			try {
+				signedPayment = signatureService.sign(KeyMetadata.EMPTY, payment);
+			}catch(EncodingFormatException e) {
+				log.warn("Bad payment message. Probably invalid address " + payment, e);
+				return toClassicAddress + " FAILED to pay:" + e.getMessage();
+			}
 			final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
 			paymentCounter++;
 			log.info(submitResult.engineResultMessage() + "- payment to" + toClassicAddress + " FSE amount:" + amount
