@@ -1,5 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -18,5 +20,5 @@ import lombok.ToString;
 public class FsePaymentResult {
 
 	
-	private String responseMessage;
+	private List<String> responseMessages;
 }
