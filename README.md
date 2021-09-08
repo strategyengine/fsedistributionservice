@@ -3,9 +3,10 @@
 #How to run locally
 1. Install https://jdk.java.net/java-se-ri/11 
 2. Install maven https://maven.apache.org/download.cgi 
-3. mvn clean compile install
-4. docker build -t fsedistributionservice .
-5. docker run fsedistributionservice
+3. install docker https://docs.docker.com/get-docker/
+4. mvn clean compile install
+5. docker build -t fsedistributionservice .
+6. docker run fsedistributionservice
 
 
 ### Reference Documentation
