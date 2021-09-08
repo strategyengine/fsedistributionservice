@@ -1,6 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.util.List;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 import lombok.extern.log4j.Log4j2;
@@ -27,6 +29,10 @@ public class XrplServiceImpl implements XrplService {
 	@VisibleForTesting
 	@Autowired
 	protected XrplClientService xrplClientService;
+
+	@VisibleForTesting
+	@Autowired
+	protected CurrencyHexService currencyHexService;
 
 	@Override
 	public List<FseTrustLine> getTrustLines(String classicAddress) {
@@ -75,21 +81,27 @@ public class XrplServiceImpl implements XrplService {
 		List<FseTrustLine> trustLines = getTrustLines(p.getTrustlineIssuerClassicAddress());
 
 		List<FsePaymentResult> results = trustLines.stream()
-				.filter(t -> p.isZeroBalanceOnly() ? Double.valueOf(t.getBalance()) == 0 : true)
+				.filter(t -> p.isZeroBalanceOnly() ? Double.valueOf(t.getBalance()) == 0 : true).filter(t -> accept(t))
+				.map(t -> currencyHexService.convertCurrencyHexToCode(t)) //convert hex currency to 3 character currency
 				.map(t -> sendFsePayment(
 						FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
 								.currencyName(p.getCurrencyName()).amount(p.getAmount())
 								.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
 								.fromSigningPublicKey(p.getFromSigningPublicKey())
-								.toClassicAddresses(asList(t.getClassicAddress()))
-								.build()))
+								.toClassicAddresses(asList(t.getClassicAddress())).build()))
 				.collect(Collectors.toList());
 
 		return results;
 
 	}
 
-	private List<String> asList(String i){
+	// add any filtration heres
+	private boolean accept(FseTrustLine t) {
+
+		return true;
+	}
+
+	private List<String> asList(String i) {
 		return ImmutableList.of(i);
 	}
 }

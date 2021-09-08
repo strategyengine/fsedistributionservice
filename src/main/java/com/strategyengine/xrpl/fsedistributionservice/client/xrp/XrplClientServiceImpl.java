@@ -41,6 +41,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 	@Autowired
 	private XrplClient xrplClient;
 
+	
 	private long paymentCounter = 0;
 
 	@Override
@@ -53,6 +54,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 		return accountInfoResult;
 	}
+
 
 	@Override
 	public AccountLinesResult getTrustLines(String classicAddress) throws Exception {
@@ -111,12 +113,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 			AccountInfoResult fromAccount = getAccountInfo(fromClassicAddress);
 
 			// Request current fee information from rippled
-			final FeeResult feeResult = waitForReasonableFee();
+			final FeeResult feeResult = waitForReasonableFee(xrplClient);
 			final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
 
 			if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
 				log.warn("Fee is too high! " + openLedgerFee.toXrp());
 			}
+
 
 			// Construct a Payment
 			// Workaround for https://github.com/XRPLF/xrpl4j/issues/84
@@ -181,8 +184,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 		}
 
 	}
-
-	private FeeResult waitForReasonableFee() throws Exception {
+	private FeeResult waitForReasonableFee(XrplClient xrplClient) throws Exception {
 
 		final FeeResult feeResult = xrplClient.fee();
 		final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
@@ -190,7 +192,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 		if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
 			log.warn("Waiting Fee is too high! " + openLedgerFee.toXrp());
 			Thread.sleep(1000);
-			return waitForReasonableFee();
+			return waitForReasonableFee(xrplClient);
 		}
 
 		return feeResult;
