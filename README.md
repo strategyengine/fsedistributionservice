@@ -1,5 +1,13 @@
 # strategyengine token distribution rest service
 
+#How to run locally
+1. Install https://jdk.java.net/java-se-ri/11 
+2. Install maven https://maven.apache.org/download.cgi 
+3. mvn clean compile install
+4. docker build -t fsedistributionservice .
+5. docker run fsedistributionservice
+
+
 ### Reference Documentation
 This spring boot application provides endpoints for sending trustline tokens
 
