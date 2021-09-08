@@ -81,11 +81,10 @@ public class XrplServiceImpl implements XrplService {
 
 		List<FsePaymentResult> results = trustLines.stream()
 				.filter(t -> p.isZeroBalanceOnly() ? Double.valueOf(t.getBalance()) == 0 : true).filter(t -> accept(t))
-				.filter(t -> currencyHexService.isAcceptedCurrency(t, p.getCurrencyName())) // validate hex currency or
-																							// 3 character currency
+				.filter(t -> currencyHexService.isAcceptedCurrency(t, p.getCurrencyName())) //validate hex currency or 3 character currency
 				.map(t -> sendFsePayment(
 						FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-								.currencyName(t.getCurrency()).amount(p.getAmount())
+								.currencyName(p.getCurrencyName()).amount(p.getAmount())
 								.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
 								.fromSigningPublicKey(p.getFromSigningPublicKey())
 								.toClassicAddresses(asList(t.getClassicAddress())).build()))
