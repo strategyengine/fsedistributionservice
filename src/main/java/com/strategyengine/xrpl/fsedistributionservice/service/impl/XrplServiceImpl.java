@@ -1,7 +1,6 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,10 +81,11 @@ public class XrplServiceImpl implements XrplService {
 
 		List<FsePaymentResult> results = trustLines.stream()
 				.filter(t -> p.isZeroBalanceOnly() ? Double.valueOf(t.getBalance()) == 0 : true).filter(t -> accept(t))
-				.map(t -> currencyHexService.convertCurrencyHexToCode(t)) //convert hex currency to 3 character currency
+				.filter(t -> currencyHexService.isAcceptedCurrency(t, p.getCurrencyName())) // validate hex currency or
+																							// 3 character currency
 				.map(t -> sendFsePayment(
 						FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-								.currencyName(p.getCurrencyName()).amount(p.getAmount())
+								.currencyName(t.getCurrency()).amount(p.getAmount())
 								.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
 								.fromSigningPublicKey(p.getFromSigningPublicKey())
 								.toClassicAddresses(asList(t.getClassicAddress())).build()))

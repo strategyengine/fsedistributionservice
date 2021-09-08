@@ -143,7 +143,7 @@ public class XrplServiceImplTest {
 
 		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(ImmutableList.of(message));
 		
-		Mockito.when(currencyHexService.convertCurrencyHexToCode(fseTrustLine)).thenReturn(fseTrustLine);
+		Mockito.when(currencyHexService.isAcceptedCurrency(fseTrustLine, currencyName)).thenReturn(true);
 
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)

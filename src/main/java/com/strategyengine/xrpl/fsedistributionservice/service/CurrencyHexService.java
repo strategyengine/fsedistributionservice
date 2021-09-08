@@ -4,6 +4,6 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 
 public interface CurrencyHexService {
 
-	FseTrustLine convertCurrencyHexToCode(FseTrustLine trustLine);
+	boolean isAcceptedCurrency(FseTrustLine trustLine, String isoCurrency);
 
 }

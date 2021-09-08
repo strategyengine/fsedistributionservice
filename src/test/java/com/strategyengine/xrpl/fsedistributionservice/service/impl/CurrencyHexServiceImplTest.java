@@ -32,9 +32,9 @@ public class CurrencyHexServiceImplTest {
 		
 		FseTrustLine trustLine = FseTrustLine.builder().currency("FSE").balance(balance).classicAddress(classicAdd).build();
 		
-		FseTrustLine actual = sut.convertCurrencyHexToCode(trustLine);
+		boolean actual = sut.isAcceptedCurrency(trustLine, "FSE");
 		
-		Assertions.assertEquals(trustLine, actual);
+		Assertions.assertTrue(actual);
 	}
 	
 	@Test
@@ -45,12 +45,9 @@ public class CurrencyHexServiceImplTest {
 		
 		FseTrustLine trustLine = FseTrustLine.builder().currency("4653450000000000000000000000000000000000").balance(balance).classicAddress(classicAdd).build();
 		
-		FseTrustLine actual = sut.convertCurrencyHexToCode(trustLine);
-
-		FseTrustLine expected = FseTrustLine.builder().currency("FSE").balance(balance).classicAddress(classicAdd).build();
+		boolean actual = sut.isAcceptedCurrency(trustLine, "FSE");
 		
-		
-		Assertions.assertEquals(expected, actual);
+		Assertions.assertTrue(actual);
 	}
 	
 	@Test

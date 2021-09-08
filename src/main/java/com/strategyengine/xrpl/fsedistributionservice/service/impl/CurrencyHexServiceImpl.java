@@ -18,19 +18,22 @@ public class CurrencyHexServiceImpl implements CurrencyHexService {
 	protected static final Pattern HEX_REGEX = Pattern.compile("^[A-Z0-9]{40}$");
 
 	@Override
-	public FseTrustLine convertCurrencyHexToCode(FseTrustLine trustLine) {
+	public boolean isAcceptedCurrency(FseTrustLine trustLine, String isoCurrency) {
 
+		String trustLineCurrency;
 		try {
 			if (isHex(trustLine.getCurrency())) {
 
-				return FseTrustLine.builder().balance(trustLine.getBalance())
-						.classicAddress(trustLine.getClassicAddress())
-						.currency(convertHexToCurrencyCode(trustLine.getCurrency())).build();
+				trustLineCurrency = convertHexToCurrencyCode(trustLine.getCurrency());
+			}else {
+				
+				trustLineCurrency = trustLine.getCurrency();
 			}
 		} catch (Exception e) {
 			log.error("Could not convert currency hex for trustline " + trustLine, e);
+			return false;
 		}
-		return trustLine;
+		return trustLineCurrency.equals(isoCurrency);
 	}
 
 	private boolean isHex(String val) {
