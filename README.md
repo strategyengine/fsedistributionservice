@@ -51,3 +51,6 @@ get trustlines for an address
 * Click Model where it says Model|Schema for documentation on each parameter 
 
 #Good luck!
+
+
+* Feeling generous?  Throw a spare coin this way: rNP3mFp8QGe1yXYMdypU7B5rXM1HK9VbDK
