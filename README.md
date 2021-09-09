@@ -43,8 +43,11 @@ schedule an airdrop to send tokens after a min number of trustlines exist.   "Ai
 get trustlines for an address
 
 
-#To start: Run FseDistributionServiceApplication and navigate to the swagger page and you can call the endpoints directly
-http://localhost:8080
-
+#To start: 
+* Run FseDistributionServiceApplication
+* Navigate to the swagger page and you can call the endpoints directly  http://localhost:8080
+* Click the XRPL Trustline endpoints section
+* Click POST /api/payment
+* Click Model where it says Model|Schema for documentation on each parameter 
 
 #Good luck!

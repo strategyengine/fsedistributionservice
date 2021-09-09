@@ -1,4 +1,4 @@
-package com.strategyengine.xrpl.fsedistributionservice.rest;
+package com.strategyengine.xrpl.fsedistributionservice.rest.trustlines;
 
 import java.util.List;
 
