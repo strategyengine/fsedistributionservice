@@ -54,3 +54,8 @@ get trustlines for an address
 
 
 * Feeling generous?  Throw a spare coin this way: rNP3mFp8QGe1yXYMdypU7B5rXM1HK9VbDK
+
+
+* ![Thank you](https://www.strategyengine.one/dyna-builder/user_images/qr_trusty.png?img_id=9&sbid=140421&w=300)
+
+
