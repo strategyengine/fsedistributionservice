@@ -28,8 +28,10 @@ public class SwaggerConfig {
 	@Bean
 	public Docket postsApi() {
 		return new Docket(DocumentationType.SWAGGER_2).apiInfo(apiInfo())
-		        .select()                                  
-		          .apis(RequestHandlerSelectors.any())              
+		        .select()
+		        .apis(RequestHandlerSelectors.basePackage("com.strategyengine.xrpl.fsedistributionservice.rest.trustlines"))  
+//.apis(postPaths())                     
+//		          .apis(RequestHandlerSelectors.any())              
 		          .paths(PathSelectors.any()).build();
 	}
 
