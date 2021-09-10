@@ -41,9 +41,10 @@ public class XrplController {
 	@RequestMapping(value = "/api/trustlines/{classicAddress}", method = RequestMethod.GET)
 	public List<FseTrustLine> trustLines(
 			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
-			@ApiParam(value = "OPTOINAL - Enter a currency to include or exclude from the response. DEFAULT is include", required = false) @RequestParam("filterCurrency") String filterCurrency,
-			@ApiParam(value = "OPTIONAL - true will only return results with the currency parameter, false will return all results not having the currency param", required = false) @RequestParam(value="includeFilter", defaultValue="true") boolean includeFilter) {
-		return xrplService.getTrustLines(classicAddress, Optional.ofNullable(filterCurrency), includeFilter);
+			@ApiParam(value = "OPTOINAL - Enter a currency to include or exclude from the response. DEFAULT is include", required = false) @RequestParam(value="filterCurrency", required=false) String filterCurrency,
+			@ApiParam(value = "OPTIONAL - true will only return results with the currency parameter, false will return all results not having the currency param", required = false) @RequestParam(value="includeFilter", required=false) Boolean includeFilter) {
+		
+		return xrplService.getTrustLines(classicAddress, Optional.ofNullable(filterCurrency), includeFilter==null? true: includeFilter);
 	}
 
 	@ApiOperation(value = "Get the details for an XRP address")
