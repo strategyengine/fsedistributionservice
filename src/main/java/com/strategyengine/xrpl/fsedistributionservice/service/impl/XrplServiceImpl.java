@@ -1,12 +1,14 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
+import org.xrpl.xrpl4j.model.client.accounts.TrustLine;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -34,17 +36,29 @@ public class XrplServiceImpl implements XrplService {
 	protected CurrencyHexService currencyHexService;
 
 	@Override
-	public List<FseTrustLine> getTrustLines(String classicAddress) {
+	public List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes) {
 		try {
 			AccountLinesResult trustLines = xrplClientService.getTrustLines(classicAddress);
 
-			return trustLines.lines().stream().map(t -> FseTrustLine.builder().classicAddress(t.account().value())
+			return trustLines.lines().stream().filter(t -> acceptByCurrency(t, currency, includes)).map(t -> FseTrustLine.builder().classicAddress(t.account().value())
 					.currency(t.currency()).balance(t.balance()).build()).collect(Collectors.toList());
 
 		} catch (Exception e) {
 			log.error("Error getting trustlines", e);
 		}
 		return null;
+	}
+	
+	@Override
+	public List<FseTrustLine> getTrustLines(String classicAddress){
+		return getTrustLines(classicAddress, Optional.empty(), true);
+	}
+
+	private boolean acceptByCurrency(TrustLine t, Optional<String> currency, boolean includes) {
+		if(currency.isEmpty()) {
+			return true;
+		}
+		return includes? currency.get().equals(t.currency()) : !currency.get().equals(t.currency());
 	}
 
 	@Override

@@ -1,12 +1,14 @@
 package com.strategyengine.xrpl.fsedistributionservice.rest.trustlines;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -38,8 +40,10 @@ public class XrplController {
 	@ApiOperation(value = "Get the Trustlines for an XRP address")
 	@RequestMapping(value = "/api/trustlines/{classicAddress}", method = RequestMethod.GET)
 	public List<FseTrustLine> trustLines(
-			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress) {
-		return xrplService.getTrustLines(classicAddress);
+			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
+			@ApiParam(value = "OPTOINAL - Enter a currency to include or exclude from the response. DEFAULT is include", required = false) @RequestParam("filterCurrency") String filterCurrency,
+			@ApiParam(value = "OPTIONAL - true will only return results with the currency parameter, false will return all results not having the currency param", required = false) @RequestParam(value="includeFilter", defaultValue="true") boolean includeFilter) {
+		return xrplService.getTrustLines(classicAddress, Optional.ofNullable(filterCurrency), includeFilter);
 	}
 
 	@ApiOperation(value = "Get the details for an XRP address")
