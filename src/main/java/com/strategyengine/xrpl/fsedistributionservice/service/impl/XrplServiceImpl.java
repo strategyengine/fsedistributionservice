@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
@@ -35,6 +36,7 @@ public class XrplServiceImpl implements XrplService {
 	@Autowired
 	protected CurrencyHexService currencyHexService;
 
+	@Cacheable("trustline-cache")
 	@Override
 	public List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes) {
 		try {
