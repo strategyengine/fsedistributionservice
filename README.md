@@ -6,7 +6,7 @@
 3. install docker https://docs.docker.com/get-docker/
 4. mvn clean compile install
 5. docker build -t fsedistributionservice .
-6. docker run fsedistributionservice
+6. docker run -p 127.0.0.1:8080:8080 fsedistributionservice
 
 
 ### Reference Documentation
