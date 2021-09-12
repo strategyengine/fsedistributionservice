@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.xrpl.xrpl4j.keypairs.DefaultKeyPairService;
+import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
+import org.xrpl.xrpl4j.wallet.Wallet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
@@ -18,6 +21,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesMinTriggeredRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.model.FseWallet;
 import com.strategyengine.xrpl.fsedistributionservice.service.TrustlineTriggerDropService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
@@ -47,6 +51,24 @@ public class XrplController {
 		return xrplService.getTrustLines(classicAddress, Optional.ofNullable(filterCurrency), includeFilter==null? true: includeFilter);
 	}
 
+	
+	@ApiOperation(value = "Generates some XRP wallets")
+	@RequestMapping(value = "/api/walletgen", method = RequestMethod.GET)
+	public FseWallet generateWallet(
+			@ApiParam(value = "OPTIONAL - DEFAULT-false - passing true will generate a wallet for the test net", required = false) @RequestParam(value="isTestWallet", required=false) Boolean isTestWallet) {
+		
+		String seed = DefaultKeyPairService.getInstance().generateSeed();
+		Wallet w  =  DefaultWalletFactory.getInstance().fromSeed(seed, isTestWallet==null? false: isTestWallet);
+
+		return FseWallet.builder().fromClassicAddress(w.classicAddress().value())
+				.isTest(w.isTest())
+				.fromPrivateKey(w.privateKey().get())
+				.fromSigningPublicKey(w.publicKey())
+				.userSeed(seed).build();
+		
+		
+	}
+	
 	@ApiOperation(value = "Get the details for an XRP address")
 	@RequestMapping(value = "/api/accountinfo/{classicAddress}", method = RequestMethod.GET)
 	public FseAccount accountInfo(

@@ -26,7 +26,6 @@ public class FsePaymentTrustlinesMinTriggeredRequest {
 	private FsePaymentTrustlinesRequest trustlinePaymentRequest;
 	
 	@ApiModelProperty(value="Number of trustlines to wait for until the tokens will be distributed", required=true)
-	@NonNull
 	private int minTrustLinesTriggerValue;
 	
 }
