@@ -177,6 +177,9 @@ public class XrplClientServiceImpl implements XrplClientService {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress);
 			}
+			if (!"tesSuccess".equals(submitResult.result())) {
+				log.warn("Payment FAILED " + submitResult.transactionResult());
+			}
 			return submitResult.result();
 		} catch (Exception e) {
 			log.error("Error sending payment to address" + toClassicAddress, e);
