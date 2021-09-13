@@ -26,6 +26,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
+import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 
 public class XrplServiceImplTest {
 
@@ -34,6 +35,9 @@ public class XrplServiceImplTest {
 
 	@Mock
 	private CurrencyHexService currencyHexService;
+	
+	@Mock
+	private ValidationService validationService;
 	
 	private XrplServiceImpl sut;
 
@@ -49,11 +53,11 @@ public class XrplServiceImplTest {
 
 	@BeforeEach
 	public void setup() {
-
 		MockitoAnnotations.openMocks(this);
 		sut = new XrplServiceImpl();
 		sut.xrplClientService = xrplClientService;
 		sut.currencyHexService = currencyHexService;
+		sut.validationService = validationService;
 	}
 
 	@Test

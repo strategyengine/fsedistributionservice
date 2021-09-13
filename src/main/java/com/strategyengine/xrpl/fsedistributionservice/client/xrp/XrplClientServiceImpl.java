@@ -170,14 +170,14 @@ public class XrplClientServiceImpl implements XrplClientService {
 			}
 			final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
 			paymentCounter++;
-			log.info(submitResult.engineResultMessage() + "- payment to" + toClassicAddress + " FSE amount:" + amount
-					+ " XRP fee:" + openLedgerFee.toXrp() + " total payments: " + paymentCounter);
+			log.info(submitResult.engineResultMessage() + "- payment to:" + toClassicAddress + " currency:"+ paymentRequest.getCurrencyName() +"  (amount:" + amount
+					+ ") (XRP fee:" + openLedgerFee.toXrp() + ") total payments: " + paymentCounter);
 
 			if ("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress);
 			}
-			if (!"tesSuccess".equals(submitResult.result())) {
+			if (!"tesSUCCESS".equals(submitResult.result())) {
 				log.warn("Payment FAILED " + submitResult.transactionResult());
 			}
 			return submitResult.result();
