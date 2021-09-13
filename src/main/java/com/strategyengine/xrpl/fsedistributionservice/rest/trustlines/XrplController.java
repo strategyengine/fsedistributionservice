@@ -4,12 +4,14 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
 import org.xrpl.xrpl4j.keypairs.DefaultKeyPairService;
 import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
 import org.xrpl.xrpl4j.wallet.Wallet;
@@ -97,6 +99,18 @@ public class XrplController {
 		// this will block a http accept thread. Add a thread pool to call this if you
 		// are going to call a lot of these.
 		trustlineTriggerDropService.triggerAirdropAfterMinTrustlines(paymentRequest);
+	}
+	
+	
+	private void validate(FsePaymentRequest payment) {
+		
+		if(payment.getDestinationTag()!=null) {
+			try {
+				Integer.parseInt(payment.getDestinationTag());
+			}catch(Exception e) {
+				throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Destination Tag is invalid.  Needs to be removed or set to a number");
+			}
+		}
 	}
 
 }
