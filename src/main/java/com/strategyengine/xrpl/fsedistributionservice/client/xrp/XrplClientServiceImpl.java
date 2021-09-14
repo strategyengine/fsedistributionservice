@@ -2,6 +2,7 @@ package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import org.xrpl.xrpl4j.model.client.accounts.AccountInfoRequestParams;
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesRequestParams;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
+import org.xrpl.xrpl4j.model.client.accounts.AccountTransactionsRequestParams;
+import org.xrpl.xrpl4j.model.client.accounts.AccountTransactionsResult;
 import org.xrpl.xrpl4j.model.client.common.LedgerIndex;
 import org.xrpl.xrpl4j.model.client.fees.FeeResult;
 import org.xrpl.xrpl4j.model.client.ledger.LedgerRequestParams;
@@ -55,6 +58,19 @@ public class XrplClientServiceImpl implements XrplClientService {
 		return accountInfoResult;
 	}
 
+	@Override
+	public AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger) throws Exception {
+		
+		AccountTransactionsResult txs = xrplClient.accountTransactions(
+				AccountTransactionsRequestParams.builder()
+			      .account(Address.of(classicAddress))
+			      .ledgerIndexMax(maxLedger)
+			      .build()
+			      );
+		
+		return txs;
+		
+	}
 
 	@Override
 	public AccountLinesResult getTrustLines(String classicAddress) throws Exception {
@@ -106,6 +122,11 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 		try {
 			String fromClassicAddress = paymentRequest.getFromClassicAddress();
+			
+			if(fromClassicAddress.equals(toClassicAddress)) {
+				return "Not sending to self";
+			}
+			
 			String amount = paymentRequest.getAmount();
 			String privateKeyStr = paymentRequest.getFromPrivateKey();
 			String destinationTag = paymentRequest.getDestinationTag();
@@ -177,7 +198,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress);
 			}
-			if (!"tesSUCCESS".equals(submitResult.result())) {
+			if (!("tesSUCCESS".equals(submitResult.result()) || "terQUEUED".equals(submitResult.result()))) {
 				log.warn("Payment FAILED " + submitResult.transactionResult());
 			}
 			return submitResult.result();
@@ -192,7 +213,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 		final FeeResult feeResult = xrplClient.fee();
 		final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
 
-		if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
+		if (openLedgerFee.toXrp().compareTo(new BigDecimal(MAX_XRP_FEE_PER_TRANSACTION)) > 0) {
 			log.warn("Waiting Fee is too high! " + openLedgerFee.toXrp());
 			Thread.sleep(1000);
 			return waitForReasonableFee(xrplClient);

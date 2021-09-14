@@ -149,6 +149,14 @@ public class XrplServiceImplTest {
 		
 		Mockito.when(currencyHexService.isAcceptedCurrency(fseTrustLine, currencyName)).thenReturn(true);
 
+		AccountInfoResult account =  Mockito.mock(AccountInfoResult.class);
+		AccountRootObject aro = Mockito.mock(AccountRootObject.class);
+		Mockito.when(aro.balance()).thenReturn(XrpCurrencyAmount.of(UnsignedLong.ONE));
+		Mockito.when(aro.account()).thenReturn(Address.of(classicAddress));
+		
+		Mockito.when(account.accountData()).thenReturn(aro);
+		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
+		
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
