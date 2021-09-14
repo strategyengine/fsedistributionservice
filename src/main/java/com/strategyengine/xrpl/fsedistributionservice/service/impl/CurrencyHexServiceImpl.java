@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 
+import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -44,5 +45,14 @@ public class CurrencyHexServiceImpl implements CurrencyHexService {
 	private String convertHexToCurrencyCode(String hex) throws DecoderException {
 
 		return new String(Hex.decodeHex(hex)).trim();
+	}
+
+	@Override
+	public boolean isAcceptedCurrency(@NonNull String currencyName) {
+		if(currencyName !=null && currencyName.length()>1) {
+			return true;
+		}
+		
+		return false;
 	}
 }

@@ -26,6 +26,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
+import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 
 public class XrplServiceImplTest {
 
@@ -34,6 +35,9 @@ public class XrplServiceImplTest {
 
 	@Mock
 	private CurrencyHexService currencyHexService;
+	
+	@Mock
+	private ValidationService validationService;
 	
 	private XrplServiceImpl sut;
 
@@ -49,11 +53,11 @@ public class XrplServiceImplTest {
 
 	@BeforeEach
 	public void setup() {
-
 		MockitoAnnotations.openMocks(this);
 		sut = new XrplServiceImpl();
 		sut.xrplClientService = xrplClientService;
 		sut.currencyHexService = currencyHexService;
+		sut.validationService = validationService;
 	}
 
 	@Test
@@ -145,6 +149,14 @@ public class XrplServiceImplTest {
 		
 		Mockito.when(currencyHexService.isAcceptedCurrency(fseTrustLine, currencyName)).thenReturn(true);
 
+		AccountInfoResult account =  Mockito.mock(AccountInfoResult.class);
+		AccountRootObject aro = Mockito.mock(AccountRootObject.class);
+		Mockito.when(aro.balance()).thenReturn(XrpCurrencyAmount.of(UnsignedLong.ONE));
+		Mockito.when(aro.account()).thenReturn(Address.of(classicAddress));
+		
+		Mockito.when(account.accountData()).thenReturn(aro);
+		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
+		
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
