@@ -207,6 +207,7 @@ public class XrplServiceImplTest {
 		
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).zeroBalanceOnly(true)
+				.agreeFee(true)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
 
 		List<FsePaymentResult> actual = sut.sendFsePaymentToTrustlines(request);
