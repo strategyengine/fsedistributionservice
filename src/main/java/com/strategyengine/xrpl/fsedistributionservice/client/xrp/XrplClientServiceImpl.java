@@ -44,7 +44,6 @@ public class XrplClientServiceImpl implements XrplClientService {
 	@Autowired
 	private XrplClient xrplClient;
 
-	
 	private long paymentCounter = 0;
 
 	@Override
@@ -59,17 +58,14 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger) throws Exception {
-		
-		AccountTransactionsResult txs = xrplClient.accountTransactions(
-				AccountTransactionsRequestParams.builder()
-			      .account(Address.of(classicAddress))
-			      .ledgerIndexMax(maxLedger)
-			      .build()
-			      );
-		
+	public AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger)
+			throws Exception {
+
+		AccountTransactionsResult txs = xrplClient.accountTransactions(AccountTransactionsRequestParams.builder()
+				.account(Address.of(classicAddress)).ledgerIndexMax(maxLedger).build());
+
 		return txs;
-		
+
 	}
 
 	@Override
@@ -121,12 +117,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress) {
 
 		try {
+
 			String fromClassicAddress = paymentRequest.getFromClassicAddress();
-			
-			if(fromClassicAddress.equals(toClassicAddress)) {
+
+			if (fromClassicAddress.equals(toClassicAddress)) {
 				return "Not sending to self";
 			}
-			
+
 			String amount = paymentRequest.getAmount();
 			String privateKeyStr = paymentRequest.getFromPrivateKey();
 			String destinationTag = paymentRequest.getDestinationTag();
@@ -140,7 +137,6 @@ public class XrplClientServiceImpl implements XrplClientService {
 			if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
 				log.warn("Fee is too high! " + openLedgerFee.toXrp());
 			}
-
 
 			// Construct a Payment
 			// Workaround for https://github.com/XRPLF/xrpl4j/issues/84
@@ -185,33 +181,36 @@ public class XrplClientServiceImpl implements XrplClientService {
 			// Sign the Payment
 			try {
 				signedPayment = signatureService.sign(KeyMetadata.EMPTY, payment);
-			}catch(EncodingFormatException e) {
+			} catch (EncodingFormatException e) {
 				log.warn("Bad payment message. Probably invalid address " + payment, e);
 				return toClassicAddress + " FAILED to pay:" + e.getMessage();
 			}
 			final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
 			paymentCounter++;
-			log.info(submitResult.engineResultMessage() + "- payment to:" + toClassicAddress + " currency:"+ paymentRequest.getCurrencyName() +"  (amount:" + amount
-					+ ") (XRP fee:" + openLedgerFee.toXrp() + ") total payments: " + paymentCounter);
+			log.info(submitResult.engineResultMessage() + "- payment to:" + toClassicAddress + " currency:"
+					+ paymentRequest.getCurrencyName() + "  (amount:" + amount + ") (XRP fee:" + openLedgerFee.toXrp()
+					+ ") total payments: " + paymentCounter);
 
 			if ("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress);
 			}
-			if("tefPAST_SEQ".equals(submitResult.result())) {
-				//retry if sequence already past
-				return sendFSEPayment(paymentRequest, toClassicAddress);				
+			if ("tefPAST_SEQ".equals(submitResult.result())) {
+				// retry if sequence already past
+				return sendFSEPayment(paymentRequest, toClassicAddress);
 			}
 			if (!("tesSUCCESS".equals(submitResult.result()) || "terQUEUED".equals(submitResult.result()))) {
 				log.warn("Payment FAILED " + submitResult.transactionResult());
 			}
+
 			return submitResult.result();
 		} catch (Exception e) {
 			log.error("Error sending payment to address" + toClassicAddress, e);
-			return "FAILED to pay " + toClassicAddress ;
+			return "FAILED to pay " + toClassicAddress;
 		}
 
 	}
+
 	private FeeResult waitForReasonableFee(XrplClient xrplClient) throws Exception {
 
 		final FeeResult feeResult = xrplClient.fee();

@@ -17,6 +17,7 @@ import org.xrpl.xrpl4j.model.transactions.Address;
 import org.xrpl.xrpl4j.model.transactions.XrpCurrencyAmount;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
@@ -26,6 +27,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
+import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 
 public class XrplServiceImplTest {
@@ -38,6 +40,9 @@ public class XrplServiceImplTest {
 	
 	@Mock
 	private ValidationService validationService;
+	
+	@Mock
+	private TransactionHistoryService transactionHistoryService;
 	
 	private XrplServiceImpl sut;
 
@@ -58,6 +63,7 @@ public class XrplServiceImplTest {
 		sut.xrplClientService = xrplClientService;
 		sut.currencyHexService = currencyHexService;
 		sut.validationService = validationService;
+		sut.transactionHistoryService = transactionHistoryService;
 	}
 
 	@Test
@@ -168,5 +174,47 @@ public class XrplServiceImplTest {
 				actual);
 
 	}
+	
+	@Test
+	public void testSendFsePaymentToTrustlinesZeroBalanceAlreadyPaid() throws Exception {
+
+		String issuerAddress = "trusty";
+		String currencyName = "FSE";
+		String amount = "2";
+		String message = "lucky dog!";
+		String signingKey = "ED123";
+		String fromPrivateKey = "shhhh";
+
+		FsePaymentRequest payment = fsepayment();
+		FseTrustLine fseTrustLine = FseTrustLine.builder().balance(balance).currency(currency).classicAddress(toAddress).build();
+		
+		Mockito.when(xrplClientService.getTrustLines(issuerAddress)).thenReturn(accountLinesResult());
+
+		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(ImmutableList.of(message));
+		
+		Mockito.when(currencyHexService.isAcceptedCurrency(fseTrustLine, currencyName)).thenReturn(true);
+		
+		Mockito.when(transactionHistoryService.getPreviouslyPaidAddresses(payment.getFromClassicAddress(), payment.getCurrencyName(), payment.getTrustlineIssuerClassicAddress()))
+		.thenReturn(Sets.newHashSet(payment.getToClassicAddresses()));
+
+		AccountInfoResult account =  Mockito.mock(AccountInfoResult.class);
+		AccountRootObject aro = Mockito.mock(AccountRootObject.class);
+		Mockito.when(aro.balance()).thenReturn(XrpCurrencyAmount.of(UnsignedLong.ONE));
+		Mockito.when(aro.account()).thenReturn(Address.of(classicAddress));
+		
+		Mockito.when(account.accountData()).thenReturn(aro);
+		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
+		
+		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
+				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).zeroBalanceOnly(true)
+				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
+
+		List<FsePaymentResult> actual = sut.sendFsePaymentToTrustlines(request);
+
+		Assertions.assertTrue(
+				actual.isEmpty());
+
+	}
+
 
 }

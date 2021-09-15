@@ -59,3 +59,20 @@ get trustlines for an address
 * ![Thank you](qr_trusty.png?img_id=9&sbid=140421&w=300)
 
 
+
+
+#Big Query Dependencies
+        CREATE OR REPLACE TABLE `flarestrategyengine.strategyengine.zero_balance_payment`
+                  (
+                  requestDate TIMESTAMP NOT NULL,
+                  toAddress String,
+                  amount String,
+                  currency String,
+                  issuer String,
+                  fromAddress String
+                  )
+                  PARTITION BY DATE(requestDate) 
+
+
+Add environment variable
+GOOGLE_APPLICATION_CREDENTIALS=<path_to_api_key>\gcp-svc-act-flarestrategyengine-050db9777d59.json

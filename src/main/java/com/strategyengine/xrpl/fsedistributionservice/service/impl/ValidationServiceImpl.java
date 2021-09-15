@@ -4,9 +4,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
@@ -31,8 +29,7 @@ public class ValidationServiceImpl implements ValidationService {
 			return;
 		}
 
-		throw new BadRequestException(
-				"Expeted classic address but received " + classicAddress);
+		throw new BadRequestException("Expeted classic address but received " + classicAddress);
 
 	}
 
@@ -43,8 +40,7 @@ public class ValidationServiceImpl implements ValidationService {
 			try {
 				Integer.parseInt(payment.getDestinationTag());
 			} catch (Exception e) {
-				throw new BadRequestException(
-						"Destination Tag is invalid.  Needs to be removed or set to a number");
+				throw new BadRequestException("Destination Tag is invalid.  Needs to be removed or set to a number");
 			}
 		}
 
@@ -119,15 +115,13 @@ public class ValidationServiceImpl implements ValidationService {
 			int size) {
 
 		if (fromAddressTrustLine.isEmpty()) {
-			throw new BadRequestException(
-					"The fromClassicAddress does not have a trustline for the currency");
+			throw new BadRequestException("The fromClassicAddress does not have a trustline for the currency");
 		}
 
 		if ((Double.valueOf(fromAddressTrustLine.get().getBalance()) * -1) < (Double.valueOf(amount) * size)) {
-			throw new BadRequestException(
-					"The fromClassicAddress does not have enough of the currency to send " + amount + " to all " + size
-							+ " trustlines.  Lower the amount or add more of the tokens to "
-							+ fromAddressTrustLine.get().getClassicAddress());
+			throw new BadRequestException("The fromClassicAddress does not have enough of the currency to send "
+					+ amount + " to all " + size + " trustlines.  Lower the amount or add more of the tokens to "
+					+ fromAddressTrustLine.get().getClassicAddress());
 		}
 	}
 
