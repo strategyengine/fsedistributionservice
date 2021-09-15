@@ -1,6 +1,9 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,35 +24,38 @@ public class TrustlineTriggerDropServiceImpl implements TrustlineTriggerDropServ
 	@Autowired
 	protected XrplService xrplService;
 	
-	
+	@VisibleForTesting
+	protected static long MILLIS_SLEEP = 1000*60*10;
+
+	ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
 	/**
 	 * After a minimum number of trustlines are reached, the airdrop will begin
 	 */
 	@Override
 	public void triggerAirdropAfterMinTrustlines(FsePaymentTrustlinesMinTriggeredRequest req) {
-	
-		int TEN_MINUTES_MILLIS = 1000*60*10;
-		triggerDrop(xrplService.getTrustLines(req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress()), req, TEN_MINUTES_MILLIS);
+
+		executorService
+				.schedule(
+						() -> triggerDrop(xrplService.getTrustLines(
+								req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress()), req),
+						MILLIS_SLEEP, TimeUnit.MILLISECONDS);
 	}
 
 	@VisibleForTesting
-	protected void triggerDrop(List<FseTrustLine> trustLines, FsePaymentTrustlinesMinTriggeredRequest req, int sleepWindow) {
+	protected void triggerDrop(List<FseTrustLine> trustLines, FsePaymentTrustlinesMinTriggeredRequest req) {
 
-		if(trustLines.size() >= req.getMinTrustLinesTriggerValue()) {
+		if (trustLines.size() >= req.getMinTrustLinesTriggerValue()) {
 			log.info("We've got enough trustlines to trigger!!   AIRDROP IT!");
 			xrplService.sendFsePaymentToTrustlines(req.getTrustlinePaymentRequest());
 		} else {
 			log.info("Not enought trustlines to send the triggered airdrop.  Total trustlines" + trustLines.size());
-			try {
-				Thread.sleep(sleepWindow);
-			}catch(Exception e) {
-				log.error("Failed to wait my turn for triggered drop!", e);
-			}
-			//check if there are enough trustlines to see if we can AIRDROP it.
-			triggerDrop(xrplService.getTrustLines(req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress()), req, sleepWindow);
+			// check if there are enough trustlines to see if we can AIRDROP it.
+			executorService.schedule(
+					() -> triggerDrop(xrplService
+							.getTrustLines(req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress()), req),
+					MILLIS_SLEEP, TimeUnit.MILLISECONDS);
 		}
-		
-		
-		
+
 	}
 }

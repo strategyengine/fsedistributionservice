@@ -198,6 +198,10 @@ public class XrplClientServiceImpl implements XrplClientService {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress);
 			}
+			if("tefPAST_SEQ".equals(submitResult.result())) {
+				//retry if sequence already past
+				return sendFSEPayment(paymentRequest, toClassicAddress);				
+			}
 			if (!("tesSUCCESS".equals(submitResult.result()) || "terQUEUED".equals(submitResult.result()))) {
 				log.warn("Payment FAILED " + submitResult.transactionResult());
 			}
