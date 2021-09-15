@@ -4,9 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.xrpl.xrpl4j.client.XrplClient;
 
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.BigQueryOptions;
-
 import okhttp3.HttpUrl;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
@@ -31,12 +28,4 @@ public class FseDistributionServiceConfig {
 		   	    
 		return xrplClient;
 	}
-	
-	@Bean
-	public BigQuery bigQuery() {
-		
-	     return BigQueryOptions.getDefaultInstance().getService();
-
-	}
-
 }
