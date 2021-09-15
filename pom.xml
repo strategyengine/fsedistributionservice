@@ -78,10 +78,6 @@
 			<artifactId>xrpl4j-model</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.google.cloud</groupId>
-			<artifactId>google-cloud-bigquery</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
@@ -100,13 +96,6 @@
 				<groupId>org.xrpl</groupId>
 				<artifactId>xrpl4j-bom</artifactId>
 				<version>2.0.0</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>com.google.cloud</groupId>
-				<artifactId>libraries-bom</artifactId>
-				<version>23.0.0</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
