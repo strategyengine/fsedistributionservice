@@ -9,9 +9,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountTransactionsResult;
@@ -32,6 +30,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
@@ -178,7 +177,7 @@ public class XrplServiceImpl implements XrplService {
 			
 		} catch (Exception e) {
 			log.error("Error fetching transactions " + classicAddress, e);
-			throw new HttpClientErrorException(HttpStatus.BAD_REQUEST,
+			throw new BadRequestException(
 					"Could not fetch transactions for address " + classicAddress);
 		}
 

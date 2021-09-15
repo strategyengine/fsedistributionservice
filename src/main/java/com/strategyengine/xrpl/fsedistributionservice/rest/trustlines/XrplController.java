@@ -4,14 +4,12 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpClientErrorException;
 import org.xrpl.xrpl4j.keypairs.DefaultKeyPairService;
 import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
 import org.xrpl.xrpl4j.wallet.Wallet;
@@ -25,6 +23,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlines
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseWallet;
+import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.TrustlineTriggerDropService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
@@ -77,7 +76,7 @@ public class XrplController {
 			@ApiParam(value = "Max ledger index", required = false) @RequestParam(value = "maxLedgerIndex", required = false) Long maxLedgerIndex,
 			@ApiParam(value = "Max results to return - DEFAULT 1000  MAX 100k", required = false) @RequestParam(value = "limit", required = false) Integer limit) {
 		if (limit != null && limit > 100000) {
-			throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Max limit of 100k exceeded.");
+			throw new BadRequestException("Max limit of 100k exceeded.");
 
 		}
 		return xrplService.getTransactions(classicAddress, Optional.ofNullable(maxLedgerIndex),
