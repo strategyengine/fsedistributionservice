@@ -29,9 +29,7 @@ public class SwaggerConfig {
 	public Docket postsApi() {
 		return new Docket(DocumentationType.SWAGGER_2).apiInfo(apiInfo())
 		        .select()
-		        .apis(RequestHandlerSelectors.basePackage("com.strategyengine.xrpl.fsedistributionservice.rest.trustlines"))  
-//.apis(postPaths())                     
-//		          .apis(RequestHandlerSelectors.any())              
+		        .apis(RequestHandlerSelectors.basePackage("com.strategyengine.xrpl.fsedistributionservice.rest.trustlines"))             
 		          .paths(PathSelectors.any()).build();
 	}
 
@@ -40,8 +38,11 @@ public class SwaggerConfig {
 	}
 
 	private ApiInfo apiInfo() {
-		return new ApiInfoBuilder().title("fsedistributionservice API")
-				.description("fsedistributionservice API reference for developers").license("fsedistributionservice License")
+		return new ApiInfoBuilder().title("XRPL Issued Token Airdrop API")
+				.description("API methods to help with issued token airdrops.  It is not recommended to use this service on a server you do not own.  "
+						+ "If you must, then use a temp XRP address for any operation that requires you to input a private key.  "
+						+ "Move just the required amounts to the temp address.")
+				.license("Apache License v2.0")
 				.version("1.0").build();
 	}
 

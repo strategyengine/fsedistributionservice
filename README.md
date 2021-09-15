@@ -1,5 +1,7 @@
 # strategyengine token distribution rest service
 
+This service also runs here -- https://fsedistributionservice-56gpv2b23a-uc.a.run.app/
+
 #How to run locally
 1. Install https://jdk.java.net/java-se-ri/11 
 2. Install maven https://maven.apache.org/download.cgi 
