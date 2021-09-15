@@ -51,6 +51,7 @@ public class XrplServiceImpl implements XrplService {
 	
 	public static final String SERVICE_FEE = "1";
 	
+	//you're a dev, do as thou wilt
 	private static final String SERVICE_FEE_ADDRESS = "rNP3mFp8QGe1yXYMdypU7B5rXM1HK9VbDK";
 
 	@Cacheable("trustline-cache")
@@ -174,7 +175,7 @@ public class XrplServiceImpl implements XrplService {
 				.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build());
 		
 
-		log.info("Found eligible TrustLines to send to.  Size: {}", trustLines.size());
+		log.info("Found eligible TrustLines to send to.  Size: {}", eligibleTrustLines.size());
 
 		List<FsePaymentResult> results = eligibleTrustLines.stream()
 				.map(t -> allowPayment(
