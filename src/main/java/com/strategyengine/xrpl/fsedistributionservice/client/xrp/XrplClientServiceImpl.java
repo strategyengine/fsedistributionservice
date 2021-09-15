@@ -25,6 +25,7 @@ import org.xrpl.xrpl4j.model.client.fees.FeeResult;
 import org.xrpl.xrpl4j.model.client.ledger.LedgerRequestParams;
 import org.xrpl.xrpl4j.model.client.transactions.SubmitResult;
 import org.xrpl.xrpl4j.model.transactions.Address;
+import org.xrpl.xrpl4j.model.transactions.CurrencyAmount;
 import org.xrpl.xrpl4j.model.transactions.IssuedCurrencyAmount;
 import org.xrpl.xrpl4j.model.transactions.Marker;
 import org.xrpl.xrpl4j.model.transactions.Payment;
@@ -152,11 +153,17 @@ public class XrplClientServiceImpl implements XrplClientService {
 																											// ledger
 																											// index
 																											// + 4
-
+            final CurrencyAmount currencyAmount;
+			if("XRP".equals(paymentRequest.getCurrencyName())) {
+				currencyAmount = XrpCurrencyAmount.ofXrp(new BigDecimal(amount));
+			}else {
+				currencyAmount = IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName())
+						.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount)
+						.build();
+			}
+			
 			Payment payment = Payment.builder().account(Address.of(fromClassicAddress))
-					.amount(IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName())
-							.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount)
-							.build())
+					.amount(currencyAmount)
 					.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
 					.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
 					.lastLedgerSequence(lastLedgerSequence).build();
