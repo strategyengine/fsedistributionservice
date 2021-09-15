@@ -7,7 +7,6 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
-import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 
 public interface XrplService {
@@ -22,8 +21,6 @@ public interface XrplService {
 	FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest);
 
 	List<FsePaymentResult> sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest paymentRequest);
-
-	List<FseTransaction> getTransactions(String classicAddress, Optional<Long> maxLedgerIndex, int limit);
 
 
 }

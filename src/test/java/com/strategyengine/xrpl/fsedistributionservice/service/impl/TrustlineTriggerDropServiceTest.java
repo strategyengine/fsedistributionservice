@@ -28,10 +28,11 @@ public class TrustlineTriggerDropServiceTest {
 		MockitoAnnotations.openMocks(this);
 		sut = new TrustlineTriggerDropServiceImpl();
 		sut.xrplService = xrplService;
+		TrustlineTriggerDropServiceImpl.MILLIS_SLEEP = 1;
 	}
 
 	@Test
-	public void testTriggerAirdrop() {
+	public void testTriggerAirdrop() throws Exception {
 
 		
 		int minTrustLinesToTriggerDrop = 2;
@@ -47,8 +48,9 @@ public class TrustlineTriggerDropServiceTest {
 				.thenReturn(trustLines(2));
 
 		//will not trigger with first check.   Second check will only have 1 trustline but third check will have 2 trustlines and trigger the drop
-		sut.triggerDrop(trustLines(1), triggeredReq, 100);
+		sut.triggerDrop(trustLines(1), triggeredReq);
 
+		Thread.sleep(10);
 		
 		Mockito.verify(xrplService).sendFsePaymentToTrustlines(trustlineReq);
 	}

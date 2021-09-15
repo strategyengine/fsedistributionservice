@@ -24,6 +24,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseWallet;
 import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
+import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TrustlineTriggerDropService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
@@ -40,6 +41,10 @@ public class XrplController {
 	@VisibleForTesting
 	@Autowired
 	protected XrplService xrplService;
+	
+	@VisibleForTesting
+	@Autowired
+	protected TransactionHistoryService transactionHistoryService;
 
 	@VisibleForTesting
 	@Autowired
@@ -79,7 +84,7 @@ public class XrplController {
 			throw new BadRequestException("Max limit of 100k exceeded.");
 
 		}
-		return xrplService.getTransactions(classicAddress, Optional.ofNullable(maxLedgerIndex),
+		return transactionHistoryService.getTransactions(classicAddress, Optional.ofNullable(maxLedgerIndex),
 				limit == null ? 1000 : limit);
 	}
 
