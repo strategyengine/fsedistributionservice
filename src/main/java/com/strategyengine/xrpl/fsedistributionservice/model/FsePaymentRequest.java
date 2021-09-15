@@ -2,6 +2,8 @@ package com.strategyengine.xrpl.fsedistributionservice.model;
 
 import java.util.List;
 
+import com.strategyengine.xrpl.fsedistributionservice.service.impl.XrplServiceImpl;
+
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -13,7 +15,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
 
-@Builder
+@Builder(toBuilder=true)
 @EqualsAndHashCode
 @ToString
 @Getter
@@ -55,4 +57,7 @@ public class FsePaymentRequest {
 	@NonNull
 	private String currencyName;
 
+	@ApiModelProperty(value="I agree to the " + XrplServiceImpl.SERVICE_FEE + " XRP fee to use this service", required=true)
+	@NonNull
+	private boolean agreeFee;
 }

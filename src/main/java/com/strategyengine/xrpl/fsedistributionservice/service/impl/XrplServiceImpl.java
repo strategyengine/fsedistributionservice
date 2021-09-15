@@ -21,6 +21,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
@@ -47,6 +48,11 @@ public class XrplServiceImpl implements XrplService {
 	@VisibleForTesting
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
+	
+	public static final String SERVICE_FEE = "1";
+	
+	//you're a dev, do as thou wilt
+	private static final String SERVICE_FEE_ADDRESS = "rNP3mFp8QGe1yXYMdypU7B5rXM1HK9VbDK";
 
 	@Cacheable("trustline-cache")
 	@Override
@@ -96,10 +102,22 @@ public class XrplServiceImpl implements XrplService {
 
 	@Override
 	public FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest) {
+		if(!paymentRequest.isAgreeFee()){
+			throw new BadRequestException("This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
+		}
+		validationService.validate(paymentRequest);		
+		allowPayment(paymentRequest.toBuilder().amount(SERVICE_FEE).currencyName("XRP").toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build());
+		
+		FsePaymentResult result = allowPayment(paymentRequest);
+		return result;
+	}
+	
+	private FsePaymentResult allowPayment(FsePaymentRequest paymentRequest) {
+		
 		validationService.validate(paymentRequest);
 		try {
 			List<String> responseMessage = xrplClientService.sendFSEPayment(paymentRequest);
-
+			
 			return FsePaymentResult.builder().responseMessages(responseMessage).build();
 		} catch (Exception e) {
 			log.error("Error sending payment to " + paymentRequest, e);
@@ -112,6 +130,9 @@ public class XrplServiceImpl implements XrplService {
 	@Override
 	public List<FsePaymentResult> sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest p) {
 		
+		if(!p.isAgreeFee()) {
+			throw new BadRequestException("This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
+		}
 		
 		final Set<String> paidAddresses;
 		
@@ -122,6 +143,7 @@ public class XrplServiceImpl implements XrplService {
 		}
 
 		validationService.validate(p);
+		
 		List<FseTrustLine> trustLines = getTrustLines(p.getTrustlineIssuerClassicAddress());
 
 		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
@@ -140,12 +162,25 @@ public class XrplServiceImpl implements XrplService {
 		
 		validationService.validateXrpBalance(fromAccount.getBalance(), eligibleTrustLines.size());
 		validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(), eligibleTrustLines.size());
+		
+		if(eligibleTrustLines.isEmpty()) {
+			return ImmutableList.of();
+		}
+		
+		//pay service fee
+		FsePaymentResult serviceFeeResult = allowPayment(FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
+				.currencyName("XRP").amount(SERVICE_FEE)
+				.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
+				.fromSigningPublicKey(p.getFromSigningPublicKey())
+				.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build());
+		
 
-		log.info("Found eligible TrustLines to send to.  Size: {}", trustLines.size());
+		log.info("Found eligible TrustLines to send to.  Size: {}", eligibleTrustLines.size());
+
 		List<FsePaymentResult> results = eligibleTrustLines.stream()
-				.map(t -> sendFsePayment(
+				.map(t -> allowPayment(
 						FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-								.currencyName(p.getCurrencyName()).amount(p.getAmount())
+								.currencyName(p.getCurrencyName()).amount(p.getAmount()).agreeFee(p.isAgreeFee())
 								.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
 								.fromSigningPublicKey(p.getFromSigningPublicKey())
 								.toClassicAddresses(asList(t.getClassicAddress())).build()))

@@ -102,7 +102,7 @@ public class ValidationServiceImpl implements ValidationService {
 	public void validateXrpBalance(BigDecimal balance, int size) {
 		double fee = Double.valueOf(XrplClientService.MAX_XRP_FEE_PER_TRANSACTION);
 
-		if (balance.doubleValue() < size * fee) {
+		if (balance.doubleValue() < ((size * fee) + Long.parseLong(XrplServiceImpl.SERVICE_FEE))) {
 
 			throw new BadRequestException(
 					"Add XRP to the fromClassicAddress to run this transaction. Balance is too low to attempt");

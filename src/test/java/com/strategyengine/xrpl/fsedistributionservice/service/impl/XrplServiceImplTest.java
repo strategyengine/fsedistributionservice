@@ -130,7 +130,7 @@ public class XrplServiceImplTest {
 		String signingKey = "ED123";
 		String issuerAddress = "trusty";
 		String currencyName = "FSE";
-		return FsePaymentRequest.builder().fromSigningPublicKey(signingKey)
+		return FsePaymentRequest.builder().fromSigningPublicKey(signingKey).agreeFee(true)
 				.toClassicAddresses(ImmutableList.of(toAddress)).fromPrivateKey(fromPrivateKey)
 				.fromClassicAddress(classicAddress).trustlineIssuerClassicAddress(issuerAddress)
 				.currencyName(currencyName).amount(amount).build();
@@ -163,7 +163,7 @@ public class XrplServiceImplTest {
 		Mockito.when(account.accountData()).thenReturn(aro);
 		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
 		
-		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
+		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey).agreeFee(true)
 				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
 
