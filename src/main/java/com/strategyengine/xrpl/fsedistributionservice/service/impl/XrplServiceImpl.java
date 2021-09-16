@@ -216,6 +216,9 @@ public class XrplServiceImpl implements XrplService {
 				p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), eligibleTrustLines, airDropStartTime,
 				airDropEndTime, new BigDecimal(p.getAmount()));
 
+		if(summary.getClassicAddressShouldHaveRecievedButDidNot()!=null && !summary.getClassicAddressShouldHaveRecievedButDidNot().isEmpty()) {
+			log.error("Transactions that completely failed fromAddress {} issueAddress {} currency {} : summary {}", p.getFromClassicAddress(), p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), summary);
+		}
 		return summary;
 
 	}
