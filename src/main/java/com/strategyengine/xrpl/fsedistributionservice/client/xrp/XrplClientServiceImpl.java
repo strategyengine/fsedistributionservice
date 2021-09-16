@@ -215,7 +215,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
-			if ("tefPAST_SEQ".equals(submitResult.result())) {
+			if ("tefPAST_SEQ".equals(submitResult.result())|| "telCAN_NOT_QUEUE".equals(submitResult.result())) {
 				// retry if sequence already past
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
@@ -255,7 +255,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 		try {
 			TransactionResult<Payment> transactionResult = null;
 
-			int MAX_WAIT_LOOPS = 5;
+			int MAX_WAIT_LOOPS = 10;
 			for (int i = 0; i < MAX_WAIT_LOOPS; i++) {
 				Thread.sleep(4 * 1000);
 				final LedgerIndex latestValidatedLedgerIndex = xrplClient
@@ -266,7 +266,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 					transactionResult = xrplClient.transaction(TransactionRequestParams.of(signedPayment.hash()),
 						Payment.class);
 				}catch(Exception e) {
-					log.info(e.getMessage() + " " + toClassicAddress);
+					log.info( "{} try to find transaction for: {} : loopCount: {}", e.getMessage(), toClassicAddress, i);
 					continue;
 				}
 				if (transactionResult.validated()) {
@@ -289,6 +289,9 @@ public class XrplClientServiceImpl implements XrplClientService {
 							sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 							return;
 						}
+					}
+					if(i==MAX_WAIT_LOOPS) {
+						log.info("Completely failed to determine success {} toClassicAddress: {} attempt: {}", transactionResult , toClassicAddress, attempt);
 					}
 				}
 			}
