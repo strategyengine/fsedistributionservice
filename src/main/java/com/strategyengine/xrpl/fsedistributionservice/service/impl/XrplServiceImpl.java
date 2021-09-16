@@ -1,5 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
+import java.math.BigDecimal;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -16,17 +18,20 @@ import org.xrpl.xrpl4j.model.client.accounts.TrustLine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
+import com.strategyengine.xrpl.fsedistributionservice.model.AirdropSummary;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
+import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
+import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -44,14 +49,20 @@ public class XrplServiceImpl implements XrplService {
 	@VisibleForTesting
 	@Autowired
 	protected ValidationService validationService;
-	
+
+	@VisibleForTesting
+	@Autowired
+	protected AirdropSummaryService airdropSummaryService;
+
 	@VisibleForTesting
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
-	
+
 	public static final String SERVICE_FEE = "1";
-	
-	//you're a dev, do as thou wilt
+
+	private static final int MAX_ATTEMPTS_TO_AIRDROP = 4;
+
+	// you're a dev, do as thou wilt
 	private static final String SERVICE_FEE_ADDRESS = "rNP3mFp8QGe1yXYMdypU7B5rXM1HK9VbDK";
 
 	@Cacheable("trustline-cache")
@@ -102,22 +113,24 @@ public class XrplServiceImpl implements XrplService {
 
 	@Override
 	public FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest) {
-		if(!paymentRequest.isAgreeFee()){
-			throw new BadRequestException("This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
+		if (!paymentRequest.isAgreeFee()) {
+			throw new BadRequestException(
+					"This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
 		}
-		validationService.validate(paymentRequest);		
-		allowPayment(paymentRequest.toBuilder().amount(SERVICE_FEE).currencyName("XRP").toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build());
-		
+		validationService.validate(paymentRequest);
+		allowPayment(paymentRequest.toBuilder().amount(SERVICE_FEE).currencyName("XRP")
+				.toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build());
+
 		FsePaymentResult result = allowPayment(paymentRequest);
 		return result;
 	}
-	
+
 	private FsePaymentResult allowPayment(FsePaymentRequest paymentRequest) {
-		
+
 		validationService.validate(paymentRequest);
 		try {
 			List<String> responseMessage = xrplClientService.sendFSEPayment(paymentRequest);
-			
+
 			return FsePaymentResult.builder().responseMessages(responseMessage).build();
 		} catch (Exception e) {
 			log.error("Error sending payment to " + paymentRequest, e);
@@ -128,22 +141,26 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public List<FsePaymentResult> sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest p) {
-		
-		if(!p.isAgreeFee()) {
-			throw new BadRequestException("This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
+	public AirdropSummary sendFsePaymentToTrustlines(@NonNull FsePaymentTrustlinesRequest p) {
+
+		Date airDropStartTime = new Date();
+
+		if (!p.isAgreeFee()) {
+			throw new BadRequestException(
+					"This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
 		}
-		
-		final Set<String> paidAddresses;
-		
-		if(p.isZeroBalanceOnly()) {
-			paidAddresses = transactionHistoryService.getPreviouslyPaidAddresses(p.getFromClassicAddress(), p.getCurrencyName(), p.getTrustlineIssuerClassicAddress());
-		}else {
-			paidAddresses = new HashSet<String>();
+
+		final Set<String> previouslyPaidAddresses;
+
+		if (p.isZeroBalanceOnly()) {
+			previouslyPaidAddresses = transactionHistoryService.getPreviouslyPaidAddresses(p.getFromClassicAddress(),
+					p.getCurrencyName(), p.getTrustlineIssuerClassicAddress());
+		} else {
+			previouslyPaidAddresses = new HashSet<String>();
 		}
 
 		validationService.validate(p);
-		
+
 		List<FseTrustLine> trustLines = getTrustLines(p.getTrustlineIssuerClassicAddress());
 
 		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
@@ -152,47 +169,59 @@ public class XrplServiceImpl implements XrplService {
 				.filter(t -> p.getFromClassicAddress().equals(t.getClassicAddress())
 						&& p.getCurrencyName().equals(t.getCurrency()))
 				.findFirst();
-		
-		//filter out trustlines that are not elibigle for the final payment list
+
+		// filter out trustlines that are not elibigle for the final payment list
 		List<FseTrustLine> eligibleTrustLines = trustLines.stream()
 				.filter(t -> p.isZeroBalanceOnly() ? Double.valueOf(t.getBalance()) == 0 : true)
-				.filter(t -> p.isZeroBalanceOnly() ? !paidAddresses.contains(t.getClassicAddress()) : true)//don't pay this address if it received a payment but just moved the tokens to be at 0 again
+				.filter(t -> p.isZeroBalanceOnly() ? !previouslyPaidAddresses.contains(t.getClassicAddress()) : true)// don't pay
+																											// this
+																											// address
+																											// if it
+																											// received
+																											// a payment
+																											// but just
+																											// moved the
+																											// tokens to
+																											// be at 0
+																											// again
 				.collect(Collectors.toList());
-		
-		
+
 		validationService.validateXrpBalance(fromAccount.getBalance(), eligibleTrustLines.size());
-		validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(), eligibleTrustLines.size());
-		
-		if(eligibleTrustLines.isEmpty()) {
-			return ImmutableList.of();
+		validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(),
+				eligibleTrustLines.size());
+
+		if (eligibleTrustLines.isEmpty()) {
+			return AirdropSummary.builder().totalAddressesReceivedDrop(0).build();
 		}
-		
-		//pay service fee
-		FsePaymentResult serviceFeeResult = allowPayment(FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-				.currencyName("XRP").amount(SERVICE_FEE)
-				.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
-				.fromSigningPublicKey(p.getFromSigningPublicKey())
-				.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build());
-		
+
+		// pay service fee
+		FsePaymentResult serviceFeeResult = allowPayment(
+				FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
+						.currencyName("XRP").amount(SERVICE_FEE).fromClassicAddress(p.getFromClassicAddress())
+						.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
+						.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build());
 
 		log.info("Found eligible TrustLines to send to.  Size: {}", eligibleTrustLines.size());
 
-		List<FsePaymentResult> results = eligibleTrustLines.stream()
-				.map(t -> allowPayment(
-						FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-								.currencyName(p.getCurrencyName()).amount(p.getAmount()).agreeFee(p.isAgreeFee())
-								.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
-								.fromSigningPublicKey(p.getFromSigningPublicKey())
-								.toClassicAddresses(asList(t.getClassicAddress())).build()))
-				.collect(Collectors.toList());
+		eligibleTrustLines.stream().map(t -> allowPayment(FsePaymentRequest.builder()
+				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).currencyName(p.getCurrencyName())
+				.amount(p.getAmount()).agreeFee(p.isAgreeFee()).fromClassicAddress(p.getFromClassicAddress())
+				.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
+				.toClassicAddresses(asList(t.getClassicAddress())).build())).collect(Collectors.toList());
 
-		return results;
+		Date airDropEndTime = new Date();
+
+		//summary will contain addresses that still have not received the airdrop so we can retry with just those addresses
+		AirdropSummary summary = airdropSummaryService.createSummary(p.getFromClassicAddress(),
+				p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), eligibleTrustLines, airDropStartTime,
+				airDropEndTime, new BigDecimal(p.getAmount()));
+
+		return summary;
 
 	}
-
-
 
 	private List<String> asList(String i) {
 		return ImmutableList.of(i);
 	}
+
 }

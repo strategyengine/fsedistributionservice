@@ -34,19 +34,21 @@ public class TransactionHistoryServiceImpl implements TransactionHistoryService 
 	@Autowired
 	protected XrplClientService xrplClientService;
 
-	private static final String TRANSACTION_TYPE_PAYMENT = "PAYMENT";
+	public static final String TRANSACTION_TYPE_PAYMENT = "PAYMENT";
 
-	private static final int MAX_PAYMENTS_TO_CHECK = 50000;
+	private static final int MAX_PAYMENTS_TO_CHECK = 60000;
 
 	@Override
 	public Set<String> getPreviouslyPaidAddresses(String classicAddress, String currency, String issuingAddress) {
 
 		List<FseTransaction> payments = getTransactions(classicAddress, Optional.empty(), MAX_PAYMENTS_TO_CHECK);
-		
-		Set<String> paidAddresses = payments.stream().filter(t -> t.getTransactionType().equals(TRANSACTION_TYPE_PAYMENT) && 
-				classicAddress.equals(t.getFromAddress()) && currency.equals(t.getCurrency()) && issuingAddress.equals(t.getIssuerAddress()))
-		.map(t -> t.getToAddress()).collect(Collectors.toSet());
-		
+
+		Set<String> paidAddresses = payments.stream()
+				.filter(t -> t.getTransactionType().equals(TRANSACTION_TYPE_PAYMENT)
+						&& classicAddress.equals(t.getFromAddress()) && currency.equals(t.getCurrency())
+						&& issuingAddress.equals(t.getIssuerAddress()))
+				.map(t -> t.getToAddress()).collect(Collectors.toSet());
+
 		return paidAddresses;
 	}
 
@@ -54,7 +56,9 @@ public class TransactionHistoryServiceImpl implements TransactionHistoryService 
 	public List<FseTransaction> getTransactions(String classicAddress, Optional<Long> maxLedgerIndex, int limit) {
 		try {
 
-			AccountTransactionsResult r = xrplClientService.getTransactions(classicAddress, Optional.empty());
+			
+			AccountTransactionsResult r = xrplClientService.getTransactions(classicAddress, 
+					maxLedgerIndex.isPresent()? Optional.of(LedgerIndex.of(UnsignedLong.valueOf(maxLedgerIndex.get()))) : Optional.empty());
 
 			List<FseTransaction> allTransactions = new ArrayList<FseTransaction>();
 			List<FseTransaction> transactions = r.transactions().stream().map(t -> convert(t))
@@ -168,8 +172,42 @@ public class TransactionHistoryServiceImpl implements TransactionHistoryService 
 	private Date convertDateFromUnsignedLong(UnsignedLong t) {
 		long rippleEpoch = 946684800000l;
 		long millisSinceEpoch = t.longValue() * 1000 + rippleEpoch;
-		
+
 		return new Date(millisSinceEpoch);
+
+	}
+
+	@Override
+	public List<FseTransaction> getTransactionsBetweenDates(String classicAddress, String currency, Date startTime,
+			Date stopTime) {
+
+		List<FseTransaction> transactionsInWindow = new ArrayList<FseTransaction>();
+		List<FseTransaction> transactions = this.getTransactions(classicAddress, Optional.empty(), 1000);
+
+		transactionsInWindow.addAll(transactions.stream()
+				.filter(t -> t.getTransactionDate().after(startTime) && t.getTransactionDate().before(stopTime))
+				.collect(Collectors.toList()));
+
+		FseTransaction lastTransaction = transactions.get(transactions.size() - 1);
+
+		while (lastTransaction.getTransactionDate().before(stopTime)) {
+
+			List<FseTransaction> newTransactions = this.getTransactions(classicAddress,
+					Optional.of(lastTransaction.getLedgerIndex()), 5000);
+
+			transactionsInWindow.addAll(newTransactions.stream()
+					.filter(t -> t.getTransactionDate().after(startTime) && t.getTransactionDate().before(stopTime))
+					.collect(Collectors.toList()));
+
+			if(newTransactions.get(newTransactions.size()-1).getTransactionDate().before(startTime)) {
+				//fetching transactions that are too old for the window
+				break;
+			}
+			lastTransaction = newTransactions.get(newTransactions.size() - 1);
+
+		}
+
+		return transactionsInWindow;
 
 	}
 

@@ -3,7 +3,11 @@ package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+
+import javax.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,9 @@ import org.xrpl.xrpl4j.model.client.common.LedgerIndex;
 import org.xrpl.xrpl4j.model.client.fees.FeeResult;
 import org.xrpl.xrpl4j.model.client.ledger.LedgerRequestParams;
 import org.xrpl.xrpl4j.model.client.transactions.SubmitResult;
+import org.xrpl.xrpl4j.model.client.transactions.TransactionRequestParams;
+import org.xrpl.xrpl4j.model.client.transactions.TransactionResult;
+import org.xrpl.xrpl4j.model.immutables.FluentCompareTo;
 import org.xrpl.xrpl4j.model.transactions.Address;
 import org.xrpl.xrpl4j.model.transactions.CurrencyAmount;
 import org.xrpl.xrpl4j.model.transactions.IssuedCurrencyAmount;
@@ -46,6 +53,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 	private XrplClient xrplClient;
 
 	private long paymentCounter = 0;
+
+	private ExecutorService executor = Executors.newFixedThreadPool(100);
+
+	@PreDestroy
+	public void shutdownExecutor() {
+		executor.shutdown();
+	}
 
 	@Override
 	public AccountInfoResult getAccountInfo(String classicAddress) throws Exception {
@@ -111,12 +125,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 	@Override
 	public List<String> sendFSEPayment(FsePaymentRequest paymentRequest) {
 
-		return paymentRequest.getToClassicAddresses().stream().map(a -> sendFSEPayment(paymentRequest, a))
+		return paymentRequest.getToClassicAddresses().stream().map(a -> sendFSEPayment(paymentRequest, a, 0))
 				.collect(Collectors.toList());
 	}
 
-	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress) {
+	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress, int attempt) {
 
+		attempt++;
 		try {
 
 			String fromClassicAddress = paymentRequest.getFromClassicAddress();
@@ -153,17 +168,15 @@ public class XrplClientServiceImpl implements XrplClientService {
 																											// ledger
 																											// index
 																											// + 4
-            final CurrencyAmount currencyAmount;
-			if("XRP".equals(paymentRequest.getCurrencyName())) {
+			final CurrencyAmount currencyAmount;
+			if ("XRP".equals(paymentRequest.getCurrencyName())) {
 				currencyAmount = XrpCurrencyAmount.ofXrp(new BigDecimal(amount));
-			}else {
+			} else {
 				currencyAmount = IssuedCurrencyAmount.builder().currency(paymentRequest.getCurrencyName())
-						.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount)
-						.build();
+						.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount).build();
 			}
-			
-			Payment payment = Payment.builder().account(Address.of(fromClassicAddress))
-					.amount(currencyAmount)
+
+			Payment payment = Payment.builder().account(Address.of(fromClassicAddress)).amount(currencyAmount)
 					.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
 					.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
 					.lastLedgerSequence(lastLedgerSequence).build();
@@ -200,16 +213,19 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 			if ("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
 				paymentRequest.setDestinationTag("589");
-				return sendFSEPayment(paymentRequest, toClassicAddress);
+				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
 			if ("tefPAST_SEQ".equals(submitResult.result())) {
 				// retry if sequence already past
-				return sendFSEPayment(paymentRequest, toClassicAddress);
+				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
 			if (!("tesSUCCESS".equals(submitResult.result()) || "terQUEUED".equals(submitResult.result()))) {
 				log.warn("Payment FAILED " + submitResult.transactionResult());
+				return submitResult.result();
 			}
-
+			final int attemptInThread = attempt;
+			executor.submit(() -> waitForLedgerSuccess(submitResult, paymentRequest, toClassicAddress, signedPayment,
+					lastLedgerSequence, attemptInThread));
 			return submitResult.result();
 		} catch (Exception e) {
 			log.error("Error sending payment to address" + toClassicAddress, e);
@@ -230,6 +246,55 @@ public class XrplClientServiceImpl implements XrplClientService {
 		}
 
 		return feeResult;
+	}
+
+	private void waitForLedgerSuccess(SubmitResult<Transaction> submitResult, FsePaymentRequest paymentRequest,
+			String toClassicAddress, SignedTransaction<Payment> signedPayment, UnsignedInteger lastLedgerSequence,
+			int attempt) {
+
+		try {
+			TransactionResult<Payment> transactionResult = null;
+
+			int MAX_WAIT_LOOPS = 5;
+			for (int i = 0; i < MAX_WAIT_LOOPS; i++) {
+				Thread.sleep(4 * 1000);
+				final LedgerIndex latestValidatedLedgerIndex = xrplClient
+						.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
+						.orElseThrow(() -> new RuntimeException("Ledger response did not contain a LedgerIndex."));
+
+				try {
+					transactionResult = xrplClient.transaction(TransactionRequestParams.of(signedPayment.hash()),
+						Payment.class);
+				}catch(Exception e) {
+					log.info(e.getMessage() + " " + toClassicAddress);
+					continue;
+				}
+				if (transactionResult.validated()) {
+					log.info("Payment to {} was validated with result code {} on attempt {}",
+							toClassicAddress, transactionResult.metadata().get().transactionResult(), attempt);
+					return;
+				} else {
+					final boolean lastLedgerSequenceHasPassed = FluentCompareTo
+							.is(latestValidatedLedgerIndex.unsignedLongValue())
+							.greaterThan(UnsignedLong.valueOf(lastLedgerSequence.intValue()));
+					if (lastLedgerSequenceHasPassed) {
+						log.info("transactionExpired - LastLedgerSequence has passed. Last tx response: to {}  tx {}",
+								toClassicAddress, transactionResult);
+						if (attempt > 3) {
+							log.error("Max attempts reached. Failing transaction to " + toClassicAddress);
+							return;
+						} else {
+							log.info("Retrying to send payment.  Attempt {} to {}", attempt, toClassicAddress);
+
+							sendFSEPayment(paymentRequest, toClassicAddress, attempt);
+							return;
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			log.error("Error with payment transaction validation.", e);
+		}
 	}
 
 }

@@ -12,6 +12,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.collect.ImmutableList;
+import com.strategyengine.xrpl.fsedistributionservice.model.AirdropSummary;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
@@ -86,13 +87,13 @@ public class XrplControllerTest {
 	@Test
 	public void testPaymentTrustlines() {
 
-		List<FsePaymentResult> expected = ImmutableList.of(fsepaymentResult());
+		AirdropSummary expected = AirdropSummary.builder().build();
 		FsePaymentTrustlinesRequest paymentRequest = Mockito.mock(FsePaymentTrustlinesRequest.class);
 
 		Mockito.when(xrplService.sendFsePaymentToTrustlines(paymentRequest))
 				.thenReturn(expected);
 
-		List<FsePaymentResult> actual = sut.paymentTrustlines(paymentRequest);
+		AirdropSummary actual = sut.paymentTrustlines(paymentRequest);
 		
 		Assertions.assertEquals(expected, actual);
 	}
