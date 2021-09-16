@@ -1,6 +1,8 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
@@ -21,14 +23,18 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
+import com.strategyengine.xrpl.fsedistributionservice.model.AirdropSummary;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
+
+import lombok.NonNull;
 
 public class XrplServiceImplTest {
 
@@ -37,13 +43,16 @@ public class XrplServiceImplTest {
 
 	@Mock
 	private CurrencyHexService currencyHexService;
-	
+
 	@Mock
 	private ValidationService validationService;
-	
+
 	@Mock
 	private TransactionHistoryService transactionHistoryService;
-	
+
+	@Mock
+	private AirdropSummaryService airdropSummaryService;
+
 	private XrplServiceImpl sut;
 
 	private String classicAddress = "bingo!";
@@ -64,6 +73,7 @@ public class XrplServiceImplTest {
 		sut.currencyHexService = currencyHexService;
 		sut.validationService = validationService;
 		sut.transactionHistoryService = transactionHistoryService;
+		sut.airdropSummaryService = airdropSummaryService;
 	}
 
 	@Test
@@ -146,35 +156,41 @@ public class XrplServiceImplTest {
 		String signingKey = "ED123";
 		String fromPrivateKey = "shhhh";
 
+		AirdropSummary expected = AirdropSummary.builder().build();
 		FsePaymentRequest payment = fsepayment();
-		FseTrustLine fseTrustLine = FseTrustLine.builder().balance(balance).currency(currency).classicAddress(toAddress).build();
-		
+		FseTrustLine fseTrustLine = FseTrustLine.builder().balance(balance).currency(currency).classicAddress(toAddress)
+				.build();
+
 		Mockito.when(xrplClientService.getTrustLines(issuerAddress)).thenReturn(accountLinesResult());
 
 		Mockito.when(xrplClientService.sendFSEPayment(payment)).thenReturn(ImmutableList.of(message));
-		
+
 		Mockito.when(currencyHexService.isAcceptedCurrency(fseTrustLine, currencyName)).thenReturn(true);
 
-		AccountInfoResult account =  Mockito.mock(AccountInfoResult.class);
+		AccountInfoResult account = Mockito.mock(AccountInfoResult.class);
 		AccountRootObject aro = Mockito.mock(AccountRootObject.class);
 		Mockito.when(aro.balance()).thenReturn(XrpCurrencyAmount.of(UnsignedLong.ONE));
 		Mockito.when(aro.account()).thenReturn(Address.of(classicAddress));
-		
+
 		Mockito.when(account.accountData()).thenReturn(aro);
 		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
+
+		Mockito.when(airdropSummaryService.createSummary(Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),
+				Mockito.anyList(),Mockito.any(),Mockito.any(),Mockito.any())).thenReturn(expected);
 		
-		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey).agreeFee(true)
-				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)
+		
+		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
+				.agreeFee(true).trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
 
-		List<FsePaymentResult> actual = sut.sendFsePaymentToTrustlines(request);
+		AirdropSummary actual = sut.sendFsePaymentToTrustlines(request);
 
-		Assertions.assertEquals(
-				ImmutableList.of(FsePaymentResult.builder().responseMessages(ImmutableList.of(message)).build()),
-				actual);
+
+		
+		Assertions.assertEquals(expected, actual);
 
 	}
-	
+
 	@Test
 	public void testSendFsePaymentToTrustlinesZeroBalanceAlreadyPaid() throws Exception {
 
@@ -201,6 +217,10 @@ public class XrplServiceImplTest {
 		AccountRootObject aro = Mockito.mock(AccountRootObject.class);
 		Mockito.when(aro.balance()).thenReturn(XrpCurrencyAmount.of(UnsignedLong.ONE));
 		Mockito.when(aro.account()).thenReturn(Address.of(classicAddress));
+		AirdropSummary expected = AirdropSummary.builder().totalAddressesReceivedDrop(0).build();
+		Mockito.when(airdropSummaryService.createSummary(Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),
+				Mockito.anyList(),Mockito.any(),Mockito.any(),Mockito.any())).thenReturn(expected);
+		
 		
 		Mockito.when(account.accountData()).thenReturn(aro);
 		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
@@ -210,12 +230,10 @@ public class XrplServiceImplTest {
 				.agreeFee(true)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
 
-		List<FsePaymentResult> actual = sut.sendFsePaymentToTrustlines(request);
+		AirdropSummary actual = sut.sendFsePaymentToTrustlines(request);
 
-		Assertions.assertTrue(
-				actual.isEmpty());
+		Assertions.assertEquals(expected, actual);
 
 	}
-
 
 }

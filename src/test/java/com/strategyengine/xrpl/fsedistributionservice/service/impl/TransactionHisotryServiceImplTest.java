@@ -82,7 +82,7 @@ public class TransactionHisotryServiceImplTest {
 				.thenReturn(AccountTransactionsResult.builder().account(Address.of(fromAddress))
 						.ledgerIndexMin(ledgerIndex).ledgerIndexMax(ledgerIndex).limit(UnsignedInteger.ONE).build());
 
-		List<FseTransaction> actual = sut.getTransactions(fromAddress, null, 10);
+		List<FseTransaction> actual = sut.getTransactions(fromAddress, Optional.empty(), 10);
 
 		FseTransaction expected = FseTransaction.builder().amount(new BigDecimal(payAmount)).currency(currency)
 				.fromAddress(fromAddress).issuerAddress(issuer).ledgerIndex(ledgerIndex.unsignedLongValue().longValue())
