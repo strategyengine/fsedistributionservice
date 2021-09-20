@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +61,6 @@ public class XrplServiceImpl implements XrplService {
 
 	public static final String SERVICE_FEE = "1";
 
-	private static final int MAX_ATTEMPTS_TO_AIRDROP = 4;
 
 	// you're a dev, do as thou wilt
 	private static final String SERVICE_FEE_ADDRESS = "rNP3mFp8QGe1yXYMdypU7B5rXM1HK9VbDK";
@@ -73,16 +73,23 @@ public class XrplServiceImpl implements XrplService {
 			validationService.validateClassicAddress(classicAddress);
 			AccountLinesResult trustLines = xrplClientService.getTrustLines(classicAddress);
 
-			return trustLines.lines().stream().filter(t -> acceptByCurrency(t, currency, includes))
+			List<FseTrustLine> fseTrustLines =  trustLines.lines().stream().filter(t -> acceptByCurrency(t, currency, includes))
 					.map(t -> FseTrustLine.builder().classicAddress(t.account().value()).currency(t.currency())
-							.balance(t.balance()).build())
+							.balance(t.balance().replaceFirst("-", "")).build())
 					.collect(Collectors.toList());
+			
+			fseTrustLines.sort(
+				      ( a, b) -> (Double.valueOf(a.getBalance()).compareTo(Double.valueOf(b.getBalance()))));
+			
+			return fseTrustLines;
 
 		} catch (Exception e) {
 			log.error("Error getting trustlines", e);
 		}
 		return null;
 	}
+	
+	
 
 	@Override
 	public List<FseTrustLine> getTrustLines(String classicAddress) {
@@ -119,18 +126,22 @@ public class XrplServiceImpl implements XrplService {
 		}
 		validationService.validate(paymentRequest);
 		allowPayment(paymentRequest.toBuilder().amount(SERVICE_FEE).currencyName("XRP")
-				.toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build());
+				.toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build(), new AtomicInteger(0));
 
-		FsePaymentResult result = allowPayment(paymentRequest);
+		FsePaymentResult result = allowPayment(paymentRequest, new AtomicInteger(0));
 		return result;
 	}
 
-	private FsePaymentResult allowPayment(FsePaymentRequest paymentRequest) {
+	private FsePaymentResult allowPayment(FsePaymentRequest paymentRequest, AtomicInteger count) {
 
+		
 		validationService.validate(paymentRequest);
 		try {
 			List<String> responseMessage = xrplClientService.sendFSEPayment(paymentRequest);
 
+			log.info("Payment to: {} for currency: {} counter:{}", 
+					paymentRequest.getToClassicAddresses(), paymentRequest.getCurrencyName(), String.valueOf(count.getAndIncrement()));
+			
 			return FsePaymentResult.builder().responseMessages(responseMessage).build();
 		} catch (Exception e) {
 			log.error("Error sending payment to " + paymentRequest, e);
@@ -199,15 +210,17 @@ public class XrplServiceImpl implements XrplService {
 				FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
 						.currencyName("XRP").amount(SERVICE_FEE).fromClassicAddress(p.getFromClassicAddress())
 						.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
-						.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build());
+						.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build(), new AtomicInteger(0));
 
 		log.info("Found eligible TrustLines to send to.  Size: {}", eligibleTrustLines.size());
-
+		
+		AtomicInteger count = new AtomicInteger(0);
+		
 		eligibleTrustLines.stream().map(t -> allowPayment(FsePaymentRequest.builder()
 				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).currencyName(p.getCurrencyName())
 				.amount(p.getAmount()).agreeFee(p.isAgreeFee()).fromClassicAddress(p.getFromClassicAddress())
 				.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
-				.toClassicAddresses(asList(t.getClassicAddress())).build())).collect(Collectors.toList());
+				.toClassicAddresses(asList(t.getClassicAddress())).build(), count)).collect(Collectors.toList());
 
 		Date airDropEndTime = new Date();
 

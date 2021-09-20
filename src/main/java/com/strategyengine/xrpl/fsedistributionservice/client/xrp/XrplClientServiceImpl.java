@@ -1,12 +1,17 @@
 package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,13 +57,23 @@ public class XrplClientServiceImpl implements XrplClientService {
 	@Autowired
 	private XrplClient xrplClient;
 
-	private long paymentCounter = 0;
-
 	private ExecutorService executor = Executors.newFixedThreadPool(100);
+
+	private Set<String> blackListedAddresses = null;
 
 	@PreDestroy
 	public void shutdownExecutor() {
 		executor.shutdown();
+	}
+
+	@PostConstruct
+	public void init() throws Exception {
+
+		try (InputStream inputStream = getClass().getResourceAsStream("/blacklisted.txt");
+				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+			blackListedAddresses = reader.lines().collect(Collectors.toSet());
+		}
+
 	}
 
 	@Override
@@ -131,6 +146,10 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress, int attempt) {
 
+		if (blackListedAddresses.contains(toClassicAddress)) {
+			log.info("Skipping blacklisted address " + toClassicAddress);
+			return "Blacklisted: " + toClassicAddress;
+		}
 		attempt++;
 		try {
 
@@ -206,16 +225,16 @@ public class XrplClientServiceImpl implements XrplClientService {
 				return toClassicAddress + " FAILED to pay:" + e.getMessage();
 			}
 			final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
-			paymentCounter++;
+
 			log.info(submitResult.engineResultMessage() + "- payment to:" + toClassicAddress + " currency:"
 					+ paymentRequest.getCurrencyName() + "  (amount:" + amount + ") (XRP fee:" + openLedgerFee.toXrp()
-					+ ") total payments: " + paymentCounter);
+					+ ")");
 
 			if ("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
-			if ("tefPAST_SEQ".equals(submitResult.result())|| "telCAN_NOT_QUEUE".equals(submitResult.result())) {
+			if ("tefPAST_SEQ".equals(submitResult.result()) || "telCAN_NOT_QUEUE".equals(submitResult.result())) {
 				// retry if sequence already past
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
@@ -264,14 +283,14 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 				try {
 					transactionResult = xrplClient.transaction(TransactionRequestParams.of(signedPayment.hash()),
-						Payment.class);
-				}catch(Exception e) {
-					log.info( "{} try to find transaction for: {} : loopCount: {}", e.getMessage(), toClassicAddress, i);
+							Payment.class);
+				} catch (Exception e) {
+					log.info("{} try to find transaction for: {} : loopCount: {}", e.getMessage(), toClassicAddress, i);
 					continue;
 				}
 				if (transactionResult.validated()) {
-					log.info("Payment to {} was validated with result code {} on attempt {}",
-							toClassicAddress, transactionResult.metadata().get().transactionResult(), attempt);
+					log.info("Payment to {} was validated with result code {} on attempt {}", toClassicAddress,
+							transactionResult.metadata().get().transactionResult(), attempt);
 					return;
 				} else {
 					final boolean lastLedgerSequenceHasPassed = FluentCompareTo
@@ -290,8 +309,9 @@ public class XrplClientServiceImpl implements XrplClientService {
 							return;
 						}
 					}
-					if(i==MAX_WAIT_LOOPS) {
-						log.info("Completely failed to determine success {} toClassicAddress: {} attempt: {}", transactionResult , toClassicAddress, attempt);
+					if (i == MAX_WAIT_LOOPS) {
+						log.info("Completely failed to determine success {} toClassicAddress: {} attempt: {}",
+								transactionResult, toClassicAddress, attempt);
 					}
 				}
 			}

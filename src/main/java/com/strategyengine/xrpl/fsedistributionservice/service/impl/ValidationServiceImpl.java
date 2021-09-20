@@ -29,7 +29,7 @@ public class ValidationServiceImpl implements ValidationService {
 			return;
 		}
 
-		throw new BadRequestException("Expeted classic address but received " + classicAddress);
+		throw new BadRequestException("Expected classic address but received " + classicAddress);
 
 	}
 
@@ -76,11 +76,11 @@ public class ValidationServiceImpl implements ValidationService {
 
 	private void validateXAddress(@NonNull String key) {
 
-		if (key != null && key.startsWith("E") && key.length() == 66) {
+		if (key != null && key.length() == 66) {
 			return;
 		}
 
-		throw new BadRequestException("Expeted 66 character key but received " + key);
+		throw new BadRequestException("Expected 66 character key but received " + key);
 
 	}
 
