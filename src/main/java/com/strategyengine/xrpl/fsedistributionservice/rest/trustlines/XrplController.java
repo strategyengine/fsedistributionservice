@@ -66,8 +66,8 @@ public class XrplController {
 			@ApiParam(value = "Classic XRP address that sent the tokens. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
 			@ApiParam(value = "Classic XRP address that issued the tokens. Example rnL2P...", required = true) @PathVariable("issuingAddress") String issuingAddress,
 			@ApiParam(value = "Currency code.", required = true) @PathVariable("currency") String currency,
-			@ApiParam(value = "startTime in GMT - FORMAT  yyyy-MM-ddTHH:mm:ss 2000-10-31 01:30:00", required = true) @RequestParam("startTime") LocalDateTime startTime,
-			@ApiParam(value = "endTime in GMT - FORMAT  yyyy-MM-ddTHH:mm:ss 2000-10-31 01:30:00", required = true) @RequestParam("stopTime") LocalDateTime stopTime,
+			@ApiParam(value = "startTime in GMT - FORMAT  yyyy-MM-dd HH:mm:ss 2000-10-31 01:30:00", required = true) @RequestParam("startTime") LocalDateTime startTime,
+			@ApiParam(value = "endTime in GMT - FORMAT  yyyy-MM-dd HH:mm:ss 2000-10-31 01:30:00", required = true) @RequestParam("stopTime") LocalDateTime stopTime,
 			@ApiParam(value = "Amount that was dropped to each address", required = true) @RequestParam("dropAmount") String dropAmount) {
 
 		Date start = Date.from(startTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -77,7 +77,7 @@ public class XrplController {
 				new BigDecimal(dropAmount));
 	}
 	
-	@ApiOperation(value = "Get the Trustlines for an XRP address")
+	@ApiOperation(value = "Get the Trustlines for an XRP address sorted by poorest.  Rich list at the bottom")
 	@RequestMapping(value = "/api/trustlines/{classicAddress}", method = RequestMethod.GET)
 	public List<FseTrustLine> trustLines(
 			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
@@ -93,14 +93,31 @@ public class XrplController {
 	public FseWallet generateWallet(
 			@ApiParam(value = "OPTIONAL - DEFAULT-false - passing true will generate a wallet for the test net", required = false) @RequestParam(value = "isTestWallet", required = false) Boolean isTestWallet) {
 
-		String seed = DefaultKeyPairService.getInstance().generateSeed();
-		Wallet w = DefaultWalletFactory.getInstance().fromSeed(seed, isTestWallet == null ? false : isTestWallet);
+		String seedVal = DefaultKeyPairService.getInstance().generateSeed();
+		Wallet w = DefaultWalletFactory.getInstance().fromSeed(seedVal, isTestWallet == null ? false : isTestWallet);
+
+		return FseWallet.builder().fromClassicAddress(w.classicAddress().value()).isTest(w.isTest())
+				.fromPrivateKey(w.privateKey().get()).fromSigningPublicKey(w.publicKey()).userSeed(seedVal).build();
+
+	}
+
+	@ApiOperation(value = "Generates some XRP wallets")
+	@RequestMapping(value = "/api/walletgenFromSeed", method = RequestMethod.POST)
+	public FseWallet generateWallet(
+			@ApiParam(value = "Seed that is used to recover this wallet", required = true) @RequestBody String seed) {
+
+
+
+		Wallet w = DefaultWalletFactory.getInstance().fromSeed(seed, false);
 
 		return FseWallet.builder().fromClassicAddress(w.classicAddress().value()).isTest(w.isTest())
 				.fromPrivateKey(w.privateKey().get()).fromSigningPublicKey(w.publicKey()).userSeed(seed).build();
 
 	}
+	
+	
 
+	
 	@ApiOperation(value = "Get the transactions for an XRP address")
 	@RequestMapping(value = "/api/transactions/{classicAddress}", method = RequestMethod.GET)
 	public List<FseTransaction> transactions(
@@ -129,6 +146,7 @@ public class XrplController {
 		return xrplService.sendFsePayment(paymentRequest);
 	}
 
+
 	@ApiOperation(value = "Distributes tokens to trustline holders.  Airdrop")
 	@RequestMapping(value = "/api/payment/trustlines", method = RequestMethod.POST)
 	public AirdropSummary paymentTrustlines(
@@ -136,28 +154,30 @@ public class XrplController {
 		// DO NOT LOG THE PRIVATE KEY!!
 		log.info(
 				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{}"
-						+ paymentRequest.getFromClassicAddress(),
+					, paymentRequest.getFromClassicAddress(),
 				paymentRequest.getFromSigningPublicKey(), paymentRequest.getAmount(),
 				paymentRequest.getTrustlineIssuerClassicAddress());
 		return xrplService.sendFsePaymentToTrustlines(paymentRequest);
 	}
 
-	@ApiOperation(value = "Distributes tokens to trustline holders only after a minimum number of trustlines have been created.  Thread will check on number of trustlines in 10 minute intervals until minimum number is reached.")
-	@RequestMapping(value = "/api/payment/trustlines/min/airdrop", method = RequestMethod.POST)
-	public void paymentTrustlinesMinAirdrop(
-			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesMinTriggeredRequest paymentRequest) {
-
-		// DO NOT LOG THE PRIVATE KEY!!
-		log.info(
-				"payment/trustlines/min/airdrop: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{}"
-						+ paymentRequest.getTrustlinePaymentRequest().getFromClassicAddress(),
-				paymentRequest.getTrustlinePaymentRequest().getFromSigningPublicKey(),
-				paymentRequest.getTrustlinePaymentRequest().getAmount(),
-				paymentRequest.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress());
-
-		// this will block a http accept thread. Add a thread pool to call this if you
-		// are going to call a lot of these.
-		trustlineTriggerDropService.triggerAirdropAfterMinTrustlines(paymentRequest);
-	}
+	
+	//commenting so it's not used on the server
+//	@ApiOperation(value = "Distributes tokens to trustline holders only after a minimum number of trustlines have been created.  Thread will check on number of trustlines in 10 minute intervals until minimum number is reached.")
+//	@RequestMapping(value = "/api/payment/trustlines/min/airdrop", method = RequestMethod.POST)
+//	public void paymentTrustlinesMinAirdrop(
+//			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesMinTriggeredRequest paymentRequest) {
+//
+//		// DO NOT LOG THE PRIVATE KEY!!
+//		log.info(
+//				"payment/trustlines/min/airdrop: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{}"
+//						, paymentRequest.getTrustlinePaymentRequest().getFromClassicAddress(),
+//				paymentRequest.getTrustlinePaymentRequest().getFromSigningPublicKey(),
+//				paymentRequest.getTrustlinePaymentRequest().getAmount(),
+//				paymentRequest.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress());
+//
+//		// this will block a http accept thread. Add a thread pool to call this if you
+//		// are going to call a lot of these.
+//		trustlineTriggerDropService.triggerAirdropAfterMinTrustlines(paymentRequest);
+//	}
 
 }

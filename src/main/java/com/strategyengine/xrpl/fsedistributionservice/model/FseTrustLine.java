@@ -22,4 +22,5 @@ public class FseTrustLine {
 	private String currency;
 	
 	private String balance;
+	
 }
