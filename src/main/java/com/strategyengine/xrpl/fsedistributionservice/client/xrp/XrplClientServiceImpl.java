@@ -146,6 +146,10 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress, int attempt) {
 
+		if(attempt > 10) {
+			log.error("Completely failed to sendFSEPayment " + paymentRequest + " " + toClassicAddress);
+			return "Failed max attempts " + toClassicAddress ;
+		}
 		if (blackListedAddresses.contains(toClassicAddress)) {
 			log.info("Skipping blacklisted address " + toClassicAddress);
 			return "Blacklisted: " + toClassicAddress;
@@ -162,8 +166,6 @@ public class XrplClientServiceImpl implements XrplClientService {
 			String amount = paymentRequest.getAmount();
 			String privateKeyStr = paymentRequest.getFromPrivateKey();
 			String destinationTag = paymentRequest.getDestinationTag();
-
-			AccountInfoResult fromAccount = getAccountInfo(fromClassicAddress);
 
 			// Request current fee information from rippled
 			final FeeResult feeResult = waitForReasonableFee(xrplClient);
@@ -195,6 +197,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 						.issuer(Address.of(paymentRequest.getTrustlineIssuerClassicAddress())).value(amount).build();
 			}
 
+			AccountInfoResult fromAccount;
+			try {
+				fromAccount = getAccountInfo(fromClassicAddress);
+			} catch (Exception e) {
+				log.warn("Error fething account " + fromClassicAddress, e);
+				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
+			}
 			Payment payment = Payment.builder().account(Address.of(fromClassicAddress)).amount(currencyAmount)
 					.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
 					.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
@@ -244,7 +253,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			}
 			final int attemptInThread = attempt;
 			executor.submit(() -> waitForLedgerSuccess(submitResult, paymentRequest, toClassicAddress, signedPayment,
-					lastLedgerSequence, attemptInThread));
+					lastLedgerSequence, fromAccount, attemptInThread));
 			return submitResult.result();
 		} catch (Exception e) {
 			log.error("Error sending payment to address" + toClassicAddress, e);
@@ -269,7 +278,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	private void waitForLedgerSuccess(SubmitResult<Transaction> submitResult, FsePaymentRequest paymentRequest,
 			String toClassicAddress, SignedTransaction<Payment> signedPayment, UnsignedInteger lastLedgerSequence,
-			int attempt) {
+			AccountInfoResult fromAccount, int attempt) {
 
 		try {
 			TransactionResult<Payment> transactionResult = null;

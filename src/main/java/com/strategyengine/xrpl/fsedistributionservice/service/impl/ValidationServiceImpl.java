@@ -118,7 +118,7 @@ public class ValidationServiceImpl implements ValidationService {
 			throw new BadRequestException("The fromClassicAddress does not have a trustline for the currency");
 		}
 
-		if ((Double.valueOf(fromAddressTrustLine.get().getBalance()) * -1) < (Double.valueOf(amount) * size)) {
+		if (Double.valueOf(fromAddressTrustLine.get().getBalance()) < (Double.valueOf(amount) * size)) {
 			throw new BadRequestException("The fromClassicAddress does not have enough of the currency to send "
 					+ amount + " to all " + size + " trustlines.  Lower the amount or add more of the tokens to "
 					+ fromAddressTrustLine.get().getClassicAddress());

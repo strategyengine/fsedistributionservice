@@ -101,7 +101,7 @@ public class TransactionHistoryServiceImpl implements TransactionHistoryService 
 	}
 
 	private FseTransaction convert(AccountTransactionsTransactionResult<?> t) {
-		return FseTransaction.builder().transactionDate(convertDateFromUnsignedLong(t.transaction().closeDate().get()))
+		return FseTransaction.builder().transactionDate(convertDateFromUnsignedLong(t.transaction().closeDate().isEmpty()? UnsignedLong.ONE : t.transaction().closeDate().get()))
 				.transactionType(t.transaction().transactionType().toString()).issuerAddress(convertIssuer(t))
 				.amount(convertPayment(t)).issuerAddress(convertIssuer(t)).toAddress(convertDestination(t))
 				.fromAddress(t.transaction().account().toString()).ledgerIndex(convertLedgerIndex(t))

@@ -1,8 +1,6 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
@@ -33,8 +31,6 @@ import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryServ
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
-
-import lombok.NonNull;
 
 public class XrplServiceImplTest {
 
@@ -226,7 +222,7 @@ public class XrplServiceImplTest {
 		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
 		
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
-				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).zeroBalanceOnly(true)
+				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).newTrustlinesOnly(true)
 				.agreeFee(true)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
 

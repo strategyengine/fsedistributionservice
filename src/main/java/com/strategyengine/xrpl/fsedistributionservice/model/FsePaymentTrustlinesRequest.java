@@ -47,8 +47,8 @@ public class FsePaymentTrustlinesRequest {
 	@NonNull
 	private String amount;
 
-	@ApiModelProperty(value = "If true, then only recipients with zero balances of the token will receive tokens.  DEFAULT VALUE: FALSE")
-	private boolean zeroBalanceOnly;
+	@ApiModelProperty(value = "If true, then only recipients who have never recieved one of your airdrops will receive one.  DEFAULT VALUE: FALSE")
+	private boolean newTrustlinesOnly;
 
 	@ApiModelProperty(value = "I agree to the " + XrplServiceImpl.SERVICE_FEE
 			+ " XRP fee to use this service", required = true)
