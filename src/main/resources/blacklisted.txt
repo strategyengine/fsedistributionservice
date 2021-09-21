@@ -1,1 +1,13 @@
 rsT78D1gPyWKrWQ8Z9c9j8ecrdcA6xAhPq
+
+
+#Below wallets just route all funds to one wallet - all connected - not worth blacklisting yet but watching
+#rh24a9oDevgacNjDP8pEb2RvSyXFZpCM1a
+#rfSMKrWhPNZm9aXnuKf4ALHsgjqLM1DSpj
+#rGdvoaRGEcnFSXFvxwBVf5VFJvBF3C1wT2
+#rJUdEEsGjNSBzidJywoWf2w5vSEvwbmUGG
+#rJ55NJHNj3CzMQ1SyiTHpyDKgf6gEqh4Ch
+#rBFAExBd3RxRZ2ZsaeGA4xHTqVpivzHLzq
+#rNUUqm7A5AjM1CQJK7rHcwFHYCxjptADCi
+#rwFBmuxaKyuAPNMzXGbGxxLXVn1Lg1KfkD
+#rhQufbTEgm96zaA7LN5n1rDLHitTsEWcYp
