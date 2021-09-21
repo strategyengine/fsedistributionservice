@@ -222,7 +222,7 @@ public class XrplServiceImplTest {
 		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(account);
 		
 		FsePaymentTrustlinesRequest request = FsePaymentTrustlinesRequest.builder().fromPrivateKey(fromPrivateKey)
-				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).zeroBalanceOnly(true)
+				.trustlineIssuerClassicAddress(issuerAddress).currencyName(currencyName).newTrustlinesOnly(true)
 				.agreeFee(true)
 				.fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount).build();
 

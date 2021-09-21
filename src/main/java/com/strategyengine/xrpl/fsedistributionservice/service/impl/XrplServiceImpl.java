@@ -159,7 +159,7 @@ public class XrplServiceImpl implements XrplService {
 
 		final Set<String> previouslyPaidAddresses;
 
-		if (p.isZeroBalanceOnly()) {
+		if (p.isNewTrustlinesOnly()) {
 			previouslyPaidAddresses = transactionHistoryService.getPreviouslyPaidAddresses(p.getFromClassicAddress(),
 					p.getCurrencyName(), p.getTrustlineIssuerClassicAddress());
 		} else {
@@ -179,8 +179,7 @@ public class XrplServiceImpl implements XrplService {
 
 		// filter out trustlines that are not elibigle for the final payment list
 		List<FseTrustLine> eligibleTrustLines = trustLines.stream()
-				.filter(t -> p.isZeroBalanceOnly() ? Double.valueOf(t.getBalance()) == 0 : true)
-				.filter(t -> p.isZeroBalanceOnly() ? !previouslyPaidAddresses.contains(t.getClassicAddress()) : true)// don't
+				.filter(t -> p.isNewTrustlinesOnly() ? !previouslyPaidAddresses.contains(t.getClassicAddress()) : true)// don't
 																														// pay
 				// this
 				// address
