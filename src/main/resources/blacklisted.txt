@@ -8,7 +8,6 @@ rLSUgQ8EDtG9zYgxwKNzw6PK5VCsuY1nkD
 rnWjct8y2N9dWrS5kBtig1PAFf1E7rNsTF
 rnUvmZYPHyQDA7wyyiETfuoDLMc5HSwJ3C 
 #### END
-
 ## START  says he didn't receive drop.  He just moved the tokens.  Tried to scam these addresses from multiple twitter accounts
 rhxBhQmuQ6nd7nUjxfb6vBHkcJHnP8vPRa
 rJbn5qxnzshPCsGx5yUBbqenHN2ZyQ4iSJ
@@ -19,10 +18,6 @@ rB4mQq4cjBMZLMjUByctLM4b9gBWNhBp1H
 rhxBhQmuQ6nd7nUjxfb6vBHkcJHnP8vPRa
 r3evFPoJfxqdYBiAvCVhiibnYMYRMCKaLM
 #### END
-
-
-
-
 #Below wallets just route all funds to one wallet - all connected - not worth blacklisting yet but watching
 #rh24a9oDevgacNjDP8pEb2RvSyXFZpCM1a
 #rfSMKrWhPNZm9aXnuKf4ALHsgjqLM1DSpj
@@ -32,3 +27,4 @@ r3evFPoJfxqdYBiAvCVhiibnYMYRMCKaLM
 #rNUUqm7A5AjM1CQJK7rHcwFHYCxjptADCi
 #rwFBmuxaKyuAPNMzXGbGxxLXVn1Lg1KfkD
 #rhQufbTEgm96zaA7LN5n1rDLHitTsEWcYp
+##### END

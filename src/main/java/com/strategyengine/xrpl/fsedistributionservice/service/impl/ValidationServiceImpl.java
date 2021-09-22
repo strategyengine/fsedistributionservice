@@ -76,7 +76,7 @@ public class ValidationServiceImpl implements ValidationService {
 
 	private void validateXAddress(@NonNull String key) {
 
-		if (key != null && key.length() == 66) {
+		if (key != null && key.length() == 65 || key.length() == 66) {
 			return;
 		}
 
