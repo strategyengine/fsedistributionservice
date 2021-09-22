@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -143,6 +144,9 @@ public class XrplController {
 	@RequestMapping(value = "/api/payment", method = RequestMethod.POST)
 	public FsePaymentResult payment(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
+		if("String".equals(paymentRequest.getDestinationTag())||StringUtils.isEmpty(paymentRequest.getDestinationTag())) {
+			paymentRequest.setDestinationTag(null);
+		}
 		return xrplService.sendFsePayment(paymentRequest);
 	}
 
