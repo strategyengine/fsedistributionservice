@@ -107,7 +107,7 @@ public class XrplServiceImplTest {
 
 		Mockito.when(xrplClientService.getAccountInfo(classicAddress)).thenReturn(accountInfoResult);
 
-		FseAccount actual = sut.getAccountInfo(classicAddress);
+		FseAccount actual = sut.getAccountInfo(ImmutableList.of(classicAddress)).get(0);
 
 		Assertions.assertEquals(
 				FseAccount.builder().balance(new BigDecimal("0.000002")).classicAddress(classicAddress).build(),

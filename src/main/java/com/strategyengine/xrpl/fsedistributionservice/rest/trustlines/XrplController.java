@@ -134,10 +134,10 @@ public class XrplController {
 	}
 
 	@ApiOperation(value = "Get the details for an XRP address")
-	@RequestMapping(value = "/api/accountinfo/{classicAddress}", method = RequestMethod.GET)
-	public FseAccount accountInfo(
-			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress) {
-		return xrplService.getAccountInfo(classicAddress);
+	@RequestMapping(value = "/api/accountinfo", method = RequestMethod.GET)
+	public List<FseAccount> accountInfo(
+			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @RequestParam(value="classicAddress", required=true) List<String> classicAddresses) {
+		return xrplService.getAccountInfo(classicAddresses);
 	}
 
 	@ApiOperation(value = "Distributes tokens to a set of recipient addresses")
