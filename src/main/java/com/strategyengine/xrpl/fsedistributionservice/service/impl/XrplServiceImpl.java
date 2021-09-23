@@ -102,12 +102,15 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public FseAccount getAccountInfo(String classicAddress) {
+	public List<FseAccount> getAccountInfo(List<String> classicAddresses) {
+		return classicAddresses.stream().map(a -> getAccountInfo(a)).collect(Collectors.toList());
+	}
+	private FseAccount getAccountInfo(String classicAddress) {
 		validationService.validateClassicAddress(classicAddress);
 		try {
 			AccountInfoResult account = xrplClientService.getAccountInfo(classicAddress);
 
-			return FseAccount.builder().classicAddress(account.accountData().account().value())
+			return FseAccount.builder().trustLines(getTrustLines(classicAddress)).classicAddress(account.accountData().account().value())
 					.balance(account.accountData().balance().toXrp()).build();
 		} catch (Exception e) {
 			log.error("Error getting account info", e);

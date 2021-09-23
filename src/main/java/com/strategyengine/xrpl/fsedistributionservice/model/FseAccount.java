@@ -1,6 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +23,6 @@ public class FseAccount {
 	private String classicAddress;
 	
 	private BigDecimal balance;
+	
+	private List<FseTrustLine> trustLines;
 }

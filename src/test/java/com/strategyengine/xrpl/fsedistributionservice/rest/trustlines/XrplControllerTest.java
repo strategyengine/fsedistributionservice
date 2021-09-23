@@ -54,11 +54,11 @@ public class XrplControllerTest {
 
 	@Test
 	public void testAccountInfo() {
-		FseAccount expected = accountInfo();
+		List<FseAccount> expected = ImmutableList.of( accountInfo());
 		
-		Mockito.when(xrplService.getAccountInfo(classicAddress)).thenReturn(expected);
+		Mockito.when(xrplService.getAccountInfo(ImmutableList.of(classicAddress))).thenReturn(expected);
 
-		FseAccount actual = sut.accountInfo(classicAddress);
+		List<FseAccount> actual = sut.accountInfo(ImmutableList.of(classicAddress));
 
 		Assertions.assertEquals(expected, actual);
 	}

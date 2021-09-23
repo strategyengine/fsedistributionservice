@@ -17,7 +17,7 @@ public interface XrplService {
 	
 	List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes);
 
-	FseAccount getAccountInfo(String classicAddress);
+	List<FseAccount> getAccountInfo(List<String> classicAddress);
 
 	FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest);
 
