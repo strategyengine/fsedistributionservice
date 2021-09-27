@@ -40,7 +40,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 			Date stopTime, BigDecimal dropAmount) {
 
 		List<FseTrustLine> trustLinesShouldHaveReceived = xrplService.getTrustLines(issuingAddress,
-				Optional.of(currency), true);
+				Optional.of(currency), true, false);
 
 		return createSummary(classicAddress, issuingAddress, currency, trustLinesShouldHaveReceived, startTime,
 				stopTime, dropAmount);

@@ -76,7 +76,7 @@ public class XrplServiceImplTest {
 	public void testGetTrustLines() throws Exception {
 
 		Mockito.when(xrplClientService.getTrustLines(classicAddress)).thenReturn(accountLinesResult());
-		List<FseTrustLine> actual = sut.getTrustLines(classicAddress);
+		List<FseTrustLine> actual = sut.getTrustLines(classicAddress, true);
 
 		List<FseTrustLine> expected = ImmutableList
 				.of(FseTrustLine.builder().balance(balance).currency(currency).classicAddress(toAddress).build());

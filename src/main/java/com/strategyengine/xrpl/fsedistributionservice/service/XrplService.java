@@ -13,9 +13,9 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 public interface XrplService {
 
 
-	List<FseTrustLine> getTrustLines(String classicAddress);
+	List<FseTrustLine> getTrustLines(String classicAddress, boolean sortByRich);
 	
-	List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes);
+	List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes, boolean sortByRich);
 
 	List<FseAccount> getAccountInfo(List<String> classicAddress);
 

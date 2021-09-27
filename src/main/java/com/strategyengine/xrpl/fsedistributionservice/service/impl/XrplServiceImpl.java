@@ -1,6 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +67,7 @@ public class XrplServiceImpl implements XrplService {
 
 	@Cacheable("trustline-cache")
 	@Override
-	public List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes) {
+	public List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes, boolean sortByRich) {
 		try {
 
 			validationService.validateClassicAddress(classicAddress);
@@ -78,8 +79,12 @@ public class XrplServiceImpl implements XrplService {
 							.balance(t.balance().replaceFirst("-", "")).build())
 					.collect(Collectors.toList());
 
-			fseTrustLines.sort((a, b) -> (Double.valueOf(a.getBalance()).compareTo(Double.valueOf(b.getBalance()))));
-
+			if(sortByRich) {
+				fseTrustLines.sort((a, b) -> (Double.valueOf(a.getBalance()).compareTo(Double.valueOf(b.getBalance()))));
+			}else {
+				//put the oldest trustlines first, OG sort
+				Collections.reverse(fseTrustLines);
+			}
 			return fseTrustLines;
 
 		} catch (Exception e) {
@@ -89,9 +94,9 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public List<FseTrustLine> getTrustLines(String classicAddress) {
+	public List<FseTrustLine> getTrustLines(String classicAddress, boolean sortByRich) {
 		validationService.validateClassicAddress(classicAddress);
-		return getTrustLines(classicAddress, Optional.empty(), true);
+		return getTrustLines(classicAddress, Optional.empty(), true, sortByRich);
 	}
 
 	private boolean acceptByCurrency(TrustLine t, Optional<String> currency, boolean includes) {
@@ -110,7 +115,7 @@ public class XrplServiceImpl implements XrplService {
 		try {
 			AccountInfoResult account = xrplClientService.getAccountInfo(classicAddress);
 
-			return FseAccount.builder().trustLines(getTrustLines(classicAddress)).classicAddress(account.accountData().account().value())
+			return FseAccount.builder().trustLines(getTrustLines(classicAddress, true)).classicAddress(account.accountData().account().value())
 					.balance(account.accountData().balance().toXrp()).build();
 		} catch (Exception e) {
 			log.error("Error getting account info", e);
@@ -171,14 +176,20 @@ public class XrplServiceImpl implements XrplService {
 
 		validationService.validate(p);
 
-		List<FseTrustLine> trustLines = getTrustLines(p.getTrustlineIssuerClassicAddress());
-
-		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
+		List<FseTrustLine> trustLines = getTrustLines(p.getTrustlineIssuerClassicAddress(), false);
 
 		Optional<FseTrustLine> fromAddressTrustLine = trustLines.stream()
 				.filter(t -> p.getFromClassicAddress().equals(t.getClassicAddress())
 						&& p.getCurrencyName().equals(t.getCurrency()))
 				.findFirst();
+		
+		if(p.getMaximumTrustlines()!=null &&  p.getMaximumTrustlines() < trustLines.size()) {
+			
+			trustLines = trustLines.subList(0, p.getMaximumTrustlines());
+		}
+
+		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
+
 
 		// filter out trustlines that are not elibigle for the final payment list
 		List<FseTrustLine> eligibleTrustLines = trustLines.stream()
