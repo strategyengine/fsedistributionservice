@@ -55,4 +55,6 @@ public class FsePaymentTrustlinesRequest {
 	@NonNull
 	private boolean agreeFee;
 
+	@ApiModelProperty(value = "OPTIONAL:  The maximum number of trustlines to send to.   Sorted by oldest, so if set to 10 then only the oldest 10 trustlines will receive this drop.  If set to 50000 but there are only 10000 actual trustlines, then all 10000 will receive the drop.   You can leave the attribute out to send to everyone", required = false)
+	private Integer maximumTrustlines;
 }

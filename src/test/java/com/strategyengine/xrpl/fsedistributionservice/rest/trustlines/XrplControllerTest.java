@@ -41,7 +41,7 @@ public class XrplControllerTest {
 	public void testTrustLines() {
 		List<FseTrustLine> expected = trustLines();
 		
-		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.empty(), true)).thenReturn(expected);
+		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.empty(), true, true)).thenReturn(expected);
 
 		List<FseTrustLine> actual = sut.trustLines(classicAddress, null, true);
 

@@ -42,9 +42,9 @@ public class TrustlineTriggerDropServiceTest {
 		FsePaymentTrustlinesMinTriggeredRequest triggeredReq = FsePaymentTrustlinesMinTriggeredRequest.builder()
 				.minTrustLinesTriggerValue(minTrustLinesToTriggerDrop).trustlinePaymentRequest(trustlineReq).build();
 
-		Mockito.when(xrplService.getTrustLines(trustlineReq.getTrustlineIssuerClassicAddress()))
+		Mockito.when(xrplService.getTrustLines(trustlineReq.getTrustlineIssuerClassicAddress(), false))
 				.thenReturn(trustLines(1));
-		Mockito.when(xrplService.getTrustLines(trustlineReq.getTrustlineIssuerClassicAddress()))
+		Mockito.when(xrplService.getTrustLines(trustlineReq.getTrustlineIssuerClassicAddress(), false))
 				.thenReturn(trustLines(2));
 
 		//will not trigger with first check.   Second check will only have 1 trustline but third check will have 2 trustlines and trigger the drop

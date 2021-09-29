@@ -38,7 +38,7 @@ public class TrustlineTriggerDropServiceImpl implements TrustlineTriggerDropServ
 		executorService
 				.schedule(
 						() -> triggerDrop(xrplService.getTrustLines(
-								req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress()), req),
+								req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress(), false), req),
 						MILLIS_SLEEP, TimeUnit.MILLISECONDS);
 	}
 
@@ -53,7 +53,7 @@ public class TrustlineTriggerDropServiceImpl implements TrustlineTriggerDropServ
 			// check if there are enough trustlines to see if we can AIRDROP it.
 			executorService.schedule(
 					() -> triggerDrop(xrplService
-							.getTrustLines(req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress()), req),
+							.getTrustLines(req.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress(), false), req),
 					MILLIS_SLEEP, TimeUnit.MILLISECONDS);
 		}
 
