@@ -76,11 +76,11 @@ public class ValidationServiceImpl implements ValidationService {
 
 	private void validateXAddress(@NonNull String key) {
 
-		if (key != null && key.length() == 65 || key.length() == 66) {
+		if (key != null && (key.length() >= 40 || key.length() <= 100)) {
 			return;
 		}
 
-		throw new BadRequestException("Expected 66 character key but received " + key);
+		throw new BadRequestException("Key length is incorrect - received " + key);
 
 	}
 
