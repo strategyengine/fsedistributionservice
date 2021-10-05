@@ -178,19 +178,6 @@ public class XrplServiceImpl implements XrplService {
 
 		List<FseTrustLine> trustLines = getTrustLines(p.getTrustlineIssuerClassicAddress(), false);
 
-		Optional<FseTrustLine> fromAddressTrustLine = trustLines.stream()
-				.filter(t -> p.getFromClassicAddress().equals(t.getClassicAddress())
-						&& p.getCurrencyName().equals(t.getCurrency()))
-				.findFirst();
-		
-		if(p.getMaximumTrustlines()!=null &&  p.getMaximumTrustlines() < trustLines.size()) {
-			
-			trustLines = trustLines.subList(0, p.getMaximumTrustlines());
-		}
-
-		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
-
-
 		// filter out trustlines that are not elibigle for the final payment list
 		List<FseTrustLine> eligibleTrustLines = trustLines.stream()
 				.filter(t -> p.isNewTrustlinesOnly() ? !previouslyPaidAddresses.contains(t.getClassicAddress()) : true)// don't
@@ -206,6 +193,20 @@ public class XrplServiceImpl implements XrplService {
 				// be at 0
 				// again
 				.collect(Collectors.toList());
+
+		
+		Optional<FseTrustLine> fromAddressTrustLine = trustLines.stream()
+				.filter(t -> p.getFromClassicAddress().equals(t.getClassicAddress())
+						&& p.getCurrencyName().equals(t.getCurrency()))
+				.findFirst();
+		
+		if(p.getMaximumTrustlines()!=null &&  p.getMaximumTrustlines() < trustLines.size()) {
+			
+			eligibleTrustLines = eligibleTrustLines.subList(0, p.getMaximumTrustlines());
+		}
+
+		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
+
 
 		validationService.validateXrpBalance(fromAccount.getBalance(), eligibleTrustLines.size());
 		validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(),

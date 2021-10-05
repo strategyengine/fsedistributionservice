@@ -240,11 +240,12 @@ public class XrplClientServiceImpl implements XrplClientService {
 					+ ")");
 
 			if ("tecDST_TAG_NEEDED".equals(submitResult.result()) && destinationTag == null) {
+				log.info("Retry - tecDST_TAG_NEEDED " + toClassicAddress);
 				paymentRequest.setDestinationTag("589");
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
 			if ("tefPAST_SEQ".equals(submitResult.result()) || "telCAN_NOT_QUEUE".equals(submitResult.result())) {
-				// retry if sequence already past
+				log.info("Retry - tefPAST_SEQ " + toClassicAddress);
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);
 			}
 			if (!("tesSUCCESS".equals(submitResult.result()) || "terQUEUED".equals(submitResult.result()))) {

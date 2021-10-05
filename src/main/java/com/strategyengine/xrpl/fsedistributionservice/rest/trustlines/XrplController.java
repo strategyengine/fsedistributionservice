@@ -156,10 +156,12 @@ public class XrplController {
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesRequest paymentRequest) {
 		// DO NOT LOG THE PRIVATE KEY!!
 		log.info(
-				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{}"
+				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} maxTrustlines:{} agreeFee:{} newTrustlinesOnly:{}"
 					, paymentRequest.getFromClassicAddress(),
 				paymentRequest.getFromSigningPublicKey(), paymentRequest.getAmount(),
-				paymentRequest.getTrustlineIssuerClassicAddress());
+				paymentRequest.getTrustlineIssuerClassicAddress(), paymentRequest.getCurrencyName(),
+				paymentRequest.getMaximumTrustlines(), paymentRequest.isAgreeFee(), paymentRequest.isNewTrustlinesOnly()
+				);
 		return xrplService.sendFsePaymentToTrustlines(paymentRequest);
 	}
 

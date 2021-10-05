@@ -36,7 +36,7 @@ public class TransactionHistoryServiceImpl implements TransactionHistoryService 
 
 	public static final String TRANSACTION_TYPE_PAYMENT = "PAYMENT";
 
-	private static final int MAX_PAYMENTS_TO_CHECK = 60000;
+	private static final int MAX_PAYMENTS_TO_CHECK = 20000;
 
 	@Override
 	public Set<String> getPreviouslyPaidAddresses(String classicAddress, String currency, String issuingAddress) {
