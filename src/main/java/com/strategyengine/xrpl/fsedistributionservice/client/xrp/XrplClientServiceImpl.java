@@ -46,6 +46,7 @@ import org.xrpl.xrpl4j.model.transactions.XrpCurrencyAmount;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
+import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 
 import lombok.extern.log4j.Log4j2;
@@ -77,8 +78,31 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public AccountInfoResult getAccountInfo(String classicAddress) throws Exception {
+	public FseAccount getAccountInfo(String classicAddress) throws Exception {
 
+		final AccountInfoResult accountInfoResult = getAccountInfoRaw(classicAddress);
+
+		return FseAccount.builder().classicAddress(classicAddress)
+				.xrpBalance(accountInfoResult.accountData().balance().toXrp())
+				.activationAddress(getActivatingAddress(classicAddress)).build();
+
+	}
+	
+	@Override 
+	public String getActivatingAddress(String classicAddress) throws Exception {
+		
+		AccountTransactionsResult txs = xrplClient.accountTransactions(AccountTransactionsRequestParams.builder()
+				//.limit(UnsignedInteger.valueOf("10"))
+				.account(Address.of(classicAddress)).forward(true).build());
+
+		Optional<String> activationAddress = txs.transactions().stream().map(t -> t.transaction().account().value())
+				.findFirst();
+
+		
+		return activationAddress.orElse(null);
+	}
+
+	public AccountInfoResult getAccountInfoRaw(String classicAddress) throws Exception {
 		final Address address = Address.builder().value(classicAddress).build();
 
 		final AccountInfoRequestParams requestParams = AccountInfoRequestParams.of(address);
@@ -146,9 +170,9 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress, int attempt) {
 
-		if(attempt > 10) {
+		if (attempt > 10) {
 			log.error("Completely failed to sendFSEPayment " + paymentRequest + " " + toClassicAddress);
-			return "Failed max attempts " + toClassicAddress ;
+			return "Failed max attempts " + toClassicAddress;
 		}
 		if (blackListedAddresses.contains(toClassicAddress)) {
 			log.info("Skipping blacklisted address " + toClassicAddress);
@@ -199,7 +223,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 			AccountInfoResult fromAccount;
 			try {
-				fromAccount = getAccountInfo(fromClassicAddress);
+				fromAccount = getAccountInfoRaw(fromClassicAddress);
 			} catch (Exception e) {
 				log.warn("Error fething account " + fromClassicAddress, e);
 				return sendFSEPayment(paymentRequest, toClassicAddress, attempt);

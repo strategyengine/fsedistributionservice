@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-@Builder
+@Builder(toBuilder=true)
 @EqualsAndHashCode
 @ToString
 @Getter
@@ -22,7 +22,9 @@ public class FseAccount {
 
 	private String classicAddress;
 	
-	private BigDecimal balance;
+	private BigDecimal xrpBalance;
 	
 	private List<FseTrustLine> trustLines;
+	
+	private String activationAddress;
 }

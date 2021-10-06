@@ -33,7 +33,7 @@ r3evFPoJfxqdYBiAvCVhiibnYMYRMCKaLM
 rGCiP1BYkCFT7CJWrSSaoREbSeuzFPs492
 ###END
 
-### ELS activating tons of addresses
+### One address activating tons of addresses for trustlines
 rUEUMLPou4tdPz343T9Qnxzhkk6eDn3Lf5
 rM4HiNQi2CWYjuK84YnoYwB4KZuMFUKbph
 rNpHWygd7ri6TM2CX4rf9EcMDkjMTDVkuz
@@ -195,3 +195,4 @@ rNZVJnZKhUy1BTVk5pVuy9uLpPnz3Wgxdh
 raaNGTYV3XomqsoYmPWEKsXtnwnQtmzjV5
 rhf3hwZeZ9j2MLtPttXaG5vRaxUNANhau7
 rhWYsmMRVyUkeGHfj5DW26szSzU1HhNkf8
+## END
