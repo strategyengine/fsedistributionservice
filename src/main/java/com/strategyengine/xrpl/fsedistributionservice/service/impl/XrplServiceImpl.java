@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
 import org.xrpl.xrpl4j.model.client.accounts.TrustLine;
 
@@ -110,13 +109,14 @@ public class XrplServiceImpl implements XrplService {
 	public List<FseAccount> getAccountInfo(List<String> classicAddresses) {
 		return classicAddresses.stream().map(a -> getAccountInfo(a)).collect(Collectors.toList());
 	}
+
+		
 	private FseAccount getAccountInfo(String classicAddress) {
 		validationService.validateClassicAddress(classicAddress);
 		try {
-			AccountInfoResult account = xrplClientService.getAccountInfo(classicAddress);
+			FseAccount account =  xrplClientService.getAccountInfo(classicAddress);
 
-			return FseAccount.builder().trustLines(getTrustLines(classicAddress, true)).classicAddress(account.accountData().account().value())
-					.balance(account.accountData().balance().toXrp()).build();
+			return account.toBuilder().trustLines(getTrustLines(classicAddress, true)).build();
 		} catch (Exception e) {
 			log.error("Error getting account info", e);
 		}
@@ -208,7 +208,7 @@ public class XrplServiceImpl implements XrplService {
 		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
 
 
-		validationService.validateXrpBalance(fromAccount.getBalance(), eligibleTrustLines.size());
+		validationService.validateXrpBalance(fromAccount.getXrpBalance(), eligibleTrustLines.size());
 		validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(),
 				eligibleTrustLines.size());
 
