@@ -18,7 +18,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter
-@ApiModel(value="POST parameters to send tokens to one or more recipients")
+@ApiModel(value="A Wallet with all required keys to use with the API")
 public class FseWallet {
 
 	@ApiModelProperty(value="XRP address from wallet that is sending the token.  Example rnL2P..", required=true )
@@ -36,10 +36,5 @@ public class FseWallet {
 	@ApiModelProperty(value="This value is not used by the API but could be used to import into other wallets", required=true)	
 	@NonNull
 	private String userSeed;
-
-	@ApiModelProperty(value="True if wallet is for the test network", required=true)	
-	@NonNull
-	private Boolean isTest;
-	
 
 }
