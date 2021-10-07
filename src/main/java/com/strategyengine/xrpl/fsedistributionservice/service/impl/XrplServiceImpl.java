@@ -23,6 +23,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.AirdropSummary;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
+import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResults;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
@@ -124,7 +125,7 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest) {
+	public List<FsePaymentResult> sendFsePayment(FsePaymentRequest paymentRequest) {
 		if (!paymentRequest.isAgreeFee()) {
 			throw new BadRequestException(
 					"This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
@@ -133,20 +134,20 @@ public class XrplServiceImpl implements XrplService {
 		allowPayment(paymentRequest.toBuilder().amount(SERVICE_FEE).currencyName("XRP")
 				.toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build(), new AtomicInteger(0));
 
-		FsePaymentResult result = allowPayment(paymentRequest, new AtomicInteger(0));
-		return result;
+		List<FsePaymentResult> results = allowPayment(paymentRequest, new AtomicInteger(0));
+		return results;
 	}
 
-	private FsePaymentResult allowPayment(FsePaymentRequest paymentRequest, AtomicInteger count) {
+	private List<FsePaymentResult> allowPayment(FsePaymentRequest paymentRequest, AtomicInteger count) {
 
 		validationService.validate(paymentRequest);
 		try {
-			List<String> responseMessage = xrplClientService.sendFSEPayment(paymentRequest);
+			List<FsePaymentResult> results = xrplClientService.sendFSEPayment(paymentRequest);
 
 			log.info("Payment to: {} for currency: {} counter:{}", paymentRequest.getToClassicAddresses(),
 					paymentRequest.getCurrencyName(), String.valueOf(count.getAndIncrement()));
 
-			return FsePaymentResult.builder().responseMessages(responseMessage).build();
+			return results;
 		} catch (Exception e) {
 			log.error("Error sending payment to " + paymentRequest, e);
 		}
@@ -156,9 +157,9 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public AirdropSummary sendFsePaymentToTrustlines(@NonNull FsePaymentTrustlinesRequest p) {
+	public FsePaymentResults sendFsePaymentToTrustlines(@NonNull FsePaymentTrustlinesRequest p) {
 
-		Date airDropStartTime = new Date();
+		Date startTime = new Date();
 
 		if (!p.isAgreeFee()) {
 			throw new BadRequestException(
@@ -213,11 +214,11 @@ public class XrplServiceImpl implements XrplService {
 				eligibleTrustLines.size());
 
 		if (eligibleTrustLines.isEmpty()) {
-			return AirdropSummary.builder().totalAddressesReceivedDrop(0).build();
+			return FsePaymentResults.builder().build();
 		}
 
 		// pay service fee
-		FsePaymentResult serviceFeeResult = allowPayment(
+		allowPayment(
 				FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
 						.currencyName("XRP").amount(SERVICE_FEE).fromClassicAddress(p.getFromClassicAddress())
 						.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
@@ -228,26 +229,13 @@ public class XrplServiceImpl implements XrplService {
 
 		AtomicInteger count = new AtomicInteger(0);
 
-		eligibleTrustLines.stream().map(t -> allowPayment(FsePaymentRequest.builder()
+		List<FsePaymentResult> results = eligibleTrustLines.stream().map(t -> allowPayment(FsePaymentRequest.builder()
 				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).currencyName(p.getCurrencyName())
 				.amount(p.getAmount()).agreeFee(p.isAgreeFee()).fromClassicAddress(p.getFromClassicAddress())
 				.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
-				.toClassicAddresses(asList(t.getClassicAddress())).build(), count)).collect(Collectors.toList());
-
-		Date airDropEndTime = new Date();
-
-		// summary will contain addresses that still have not received the airdrop so we
-		// can retry with just those addresses
-		AirdropSummary summary = airdropSummaryService.createSummary(p.getFromClassicAddress(),
-				p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), eligibleTrustLines, airDropStartTime,
-				airDropEndTime, new BigDecimal(p.getAmount()));
-
-		if (summary.getClassicAddressShouldHaveRecievedButDidNot() != null
-				&& !summary.getClassicAddressShouldHaveRecievedButDidNot().isEmpty()) {
-			log.error("Transactions that completely failed fromAddress {} issueAddress {} currency {} : summary {}",
-					p.getFromClassicAddress(), p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), summary);
-		}
-		return summary;
+				.toClassicAddresses(asList(t.getClassicAddress())).build(), count)).flatMap(List::stream).collect(Collectors.toList());
+		
+		return FsePaymentResults.builder().results(results).start(startTime).end(new Date()).transactionCount(count.get()).build();
 
 	}
 

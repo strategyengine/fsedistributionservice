@@ -3,10 +3,10 @@ package com.strategyengine.xrpl.fsedistributionservice.service;
 import java.util.List;
 import java.util.Optional;
 
-import com.strategyengine.xrpl.fsedistributionservice.model.AirdropSummary;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
+import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResults;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 
@@ -19,9 +19,9 @@ public interface XrplService {
 
 	List<FseAccount> getAccountInfo(List<String> classicAddress);
 
-	FsePaymentResult sendFsePayment(FsePaymentRequest paymentRequest);
+	List<FsePaymentResult> sendFsePayment(FsePaymentRequest paymentRequest);
 
-	AirdropSummary sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest paymentRequest);
+	FsePaymentResults sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest paymentRequest);
 
 
 }
