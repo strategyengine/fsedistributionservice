@@ -1,7 +1,11 @@
 package com.strategyengine.xrpl.fsedistributionservice.rest.trustlines;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +16,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.strategyengine.xrpl.fsedistributionservice.model.AirdropSummary;
+import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
+import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
+import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
+import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.AnalysisService;
+import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
+import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -20,7 +32,7 @@ import io.swagger.annotations.ApiParam;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-@Api(tags = "XRPL Trustline analysis")
+@Api(tags = "Trustline analysis")
 @RestController
 public class AnalysisController {
 
@@ -28,8 +40,19 @@ public class AnalysisController {
 	@VisibleForTesting
 	@Autowired
 	protected AnalysisService analysisService;
-	
 
+	@VisibleForTesting
+	@Autowired
+	protected TransactionHistoryService transactionHistoryService;
+	
+	@VisibleForTesting
+	@Autowired
+	protected XrplService xrplService;
+
+	@VisibleForTesting
+	@Autowired
+	protected AirdropSummaryService airdropSummaryService;
+	
 	@ApiOperation(value = "Find the addresses that have been paid by this address")
 	@RequestMapping(value = "/analysis/paidaddresses/{classicAddress}", method = RequestMethod.GET)
 	public Set<String> getLineage(
@@ -37,6 +60,55 @@ public class AnalysisController {
 
 		return analysisService.getPaidAddresses(classicAddress);
 
+	}
+	
+	@ApiOperation(value = "Get the Trustlines for an XRP address sorted by poorest.  Rich list at the bottom")
+	@RequestMapping(value = "/api/trustlines/{classicAddress}", method = RequestMethod.GET)
+	public List<FseTrustLine> trustLines(
+			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
+			@ApiParam(value = "OPTOINAL - Enter a currency to include or exclude from the response. DEFAULT is include", required = false) @RequestParam(value = "filterCurrency", required = false) String filterCurrency,
+			@ApiParam(value = "OPTIONAL - true will only return results with the currency parameter, false will return all results not having the currency param", required = false) @RequestParam(value = "includeFilter", required = false) Boolean includeFilter) {
+
+		return xrplService.getTrustLines(classicAddress, Optional.ofNullable(filterCurrency),
+				includeFilter == null ? true : includeFilter, true);
+	}
+
+	@ApiOperation(value = "Create a summary of an airdrop between a time window")
+	@RequestMapping(value = "/api/airdrop/summary/{classicAddress}/{issuingAddress}/{currency}", method = RequestMethod.GET)
+	public AirdropSummary validateAirdrop(
+			@ApiParam(value = "Classic XRP address that sent the tokens. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
+			@ApiParam(value = "Classic XRP address that issued the tokens. Example rnL2P...", required = true) @PathVariable("issuingAddress") String issuingAddress,
+			@ApiParam(value = "Currency code.", required = true) @PathVariable("currency") String currency,
+			@ApiParam(value = "startTime in GMT - FORMAT  yyyy-MM-dd HH:mm:ss 2000-10-31 01:30:00", required = true) @RequestParam("startTime") LocalDateTime startTime,
+			@ApiParam(value = "endTime in GMT - FORMAT  yyyy-MM-dd HH:mm:ss 2000-10-31 01:30:00", required = true) @RequestParam("stopTime") LocalDateTime stopTime,
+			@ApiParam(value = "Amount that was dropped to each address", required = true) @RequestParam("dropAmount") String dropAmount) {
+
+		Date start = Date.from(startTime.atZone(ZoneId.of("UTC")).toInstant());
+		Date stop = Date.from(stopTime.atZone(ZoneId.of("UTC")).toInstant());
+		
+		return airdropSummaryService.airdropSummary(classicAddress, issuingAddress, currency, start, stop,
+				new BigDecimal(dropAmount));
+	}
+	
+	@ApiOperation(value = "Get the transactions for an XRP address")
+	@RequestMapping(value = "/api/transactions/{classicAddress}", method = RequestMethod.GET)
+	public List<FseTransaction> transactions(
+			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress,
+			@ApiParam(value = "Max ledger index", required = false) @RequestParam(value = "maxLedgerIndex", required = false) Long maxLedgerIndex,
+			@ApiParam(value = "Max results to return - DEFAULT 1000  MAX 100k", required = false) @RequestParam(value = "limit", required = false) Integer limit) {
+		if (limit != null && limit > 100000) {
+			throw new BadRequestException("Max limit of 100k exceeded.");
+
+		}
+		return transactionHistoryService.getTransactions(classicAddress, Optional.ofNullable(maxLedgerIndex),
+				limit == null ? 1000 : limit);
+	}
+
+	@ApiOperation(value = "Get the details for an XRP address")
+	@RequestMapping(value = "/api/accountinfo", method = RequestMethod.GET)
+	public List<FseAccount> accountInfo(
+			@ApiParam(value = "Classic XRP address. Example rnL2P...", required = true) @RequestParam(value="classicAddress", required=true) List<String> classicAddresses) {
+		return xrplService.getAccountInfo(classicAddresses);
 	}
 
 	//NOT ready yet.  activation address not returning consinstently from xrplclient

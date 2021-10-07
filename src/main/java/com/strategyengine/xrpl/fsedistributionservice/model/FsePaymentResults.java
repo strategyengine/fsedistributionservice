@@ -1,5 +1,8 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.util.Date;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -15,10 +18,11 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter
-public class FsePaymentResult {
+public class FsePaymentResults {
 
+	private List<FsePaymentResult> results;
 	
-	private String responseCode;
-	private String reason;
-	private String classicAddress;
+	private Date start;
+	private Date end;
+	private int transactionCount;
 }

@@ -9,6 +9,7 @@ import org.xrpl.xrpl4j.model.client.common.LedgerIndex;
 
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
+import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 
 public interface XrplClientService {
 	
@@ -18,7 +19,7 @@ public interface XrplClientService {
 
 	AccountLinesResult getTrustLines(String classicAddress) throws Exception;
 
-	List<String> sendFSEPayment(FsePaymentRequest paymentRequest) throws Exception;
+	List<FsePaymentResult> sendFSEPayment(FsePaymentRequest paymentRequest) throws Exception;
 
 	AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger) throws Exception;
 

@@ -48,6 +48,7 @@ import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
+import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -84,15 +85,17 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 		return FseAccount.builder().classicAddress(classicAddress)
 				.xrpBalance(accountInfoResult.accountData().balance().toXrp())
-				.activationAddress(getActivatingAddress(classicAddress)).build();
+				.build();
 
 	}
 	
 	@Override 
 	public String getActivatingAddress(String classicAddress) throws Exception {
 		
+		//I think the client might be pulling all transactions in order to work backwards and has some kind of built in limit
+		// always getting null for activating adress
 		AccountTransactionsResult txs = xrplClient.accountTransactions(AccountTransactionsRequestParams.builder()
-				//.limit(UnsignedInteger.valueOf("10"))
+				.limit(UnsignedInteger.ONE)
 				.account(Address.of(classicAddress)).forward(true).build());
 
 		Optional<String> activationAddress = txs.transactions().stream().map(t -> t.transaction().account().value())
@@ -162,21 +165,21 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public List<String> sendFSEPayment(FsePaymentRequest paymentRequest) {
+	public List<FsePaymentResult> sendFSEPayment(FsePaymentRequest paymentRequest) {
 
 		return paymentRequest.getToClassicAddresses().stream().map(a -> sendFSEPayment(paymentRequest, a, 0))
 				.collect(Collectors.toList());
 	}
 
-	private String sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress, int attempt) {
+	private FsePaymentResult sendFSEPayment(FsePaymentRequest paymentRequest, String toClassicAddress, int attempt) {
 
 		if (attempt > 10) {
 			log.error("Completely failed to sendFSEPayment " + paymentRequest + " " + toClassicAddress);
-			return "Failed max attempts " + toClassicAddress;
+			return FsePaymentResult.builder().reason("Failed max attempts").responseCode("maxAttemptFail").classicAddress(toClassicAddress).build();
 		}
 		if (blackListedAddresses.contains(toClassicAddress)) {
 			log.info("Skipping blacklisted address " + toClassicAddress);
-			return "Blacklisted: " + toClassicAddress;
+			return FsePaymentResult.builder().reason("Blacklisted Address").responseCode("blacklistedFail").classicAddress(toClassicAddress).build();
 		}
 		attempt++;
 		try {
@@ -184,7 +187,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			String fromClassicAddress = paymentRequest.getFromClassicAddress();
 
 			if (fromClassicAddress.equals(toClassicAddress)) {
-				return "Not sending to self";
+				return FsePaymentResult.builder().reason("Will not send payment to self").responseCode("paySelfNotAllowedFail").classicAddress(toClassicAddress).build();
 			}
 
 			String amount = paymentRequest.getAmount();
@@ -255,7 +258,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 				signedPayment = signatureService.sign(KeyMetadata.EMPTY, payment);
 			} catch (EncodingFormatException e) {
 				log.warn("Bad payment message. Probably invalid address " + payment, e);
-				return toClassicAddress + " FAILED to pay:" + e.getMessage();
+				return FsePaymentResult.builder().reason(e.getMessage()).responseCode("signatureFail").classicAddress(toClassicAddress).build();
 			}
 			final SubmitResult<Transaction> submitResult = xrplClient.submit(signedPayment);
 
@@ -274,15 +277,15 @@ public class XrplClientServiceImpl implements XrplClientService {
 			}
 			if (!("tesSUCCESS".equals(submitResult.result()) || "terQUEUED".equals(submitResult.result()))) {
 				log.warn("Payment FAILED " + submitResult.transactionResult());
-				return submitResult.result();
+				return FsePaymentResult.builder().reason(submitResult.engineResultMessage().orElse(null)).responseCode(submitResult.result()).classicAddress(toClassicAddress).build();
 			}
 			final int attemptInThread = attempt;
 			executor.submit(() -> waitForLedgerSuccess(submitResult, paymentRequest, toClassicAddress, signedPayment,
 					lastLedgerSequence, fromAccount, attemptInThread));
-			return submitResult.result();
+			return FsePaymentResult.builder().reason(submitResult.engineResultMessage().orElse(null)).responseCode(submitResult.result()).classicAddress(toClassicAddress).build();
 		} catch (Exception e) {
 			log.error("Error sending payment to address" + toClassicAddress, e);
-			return "FAILED to pay " + toClassicAddress;
+			return FsePaymentResult.builder().reason(e.getMessage()).responseCode("paymentFail").classicAddress(toClassicAddress).build();
 		}
 
 	}
