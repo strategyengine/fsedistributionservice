@@ -18,11 +18,8 @@ import org.xrpl.xrpl4j.wallet.WalletFactory;
  */
 public class XrpWalletGenerator {
 
-	static boolean isTest = false;
 
 	public static void main(String[] args) throws JsonRpcClientErrorException {
-
-		System.out.println("IS PROD WALLET? " + !isTest);
 
 		Wallet wallet = null;
 		String seed = null;
@@ -48,7 +45,7 @@ public class XrpWalletGenerator {
 
 		// Create a Wallet using a WalletFactory
 		WalletFactory walletFactory = DefaultWalletFactory.getInstance();
-		final Wallet wallet = walletFactory.fromSeed(seed, isTest);
+		final Wallet wallet = walletFactory.fromSeed(seed, false);
 
 		return wallet;
 

@@ -51,7 +51,7 @@ public class WalletController {
 		String seedVal = DefaultKeyPairService.getInstance().generateSeed();
 		Wallet w = DefaultWalletFactory.getInstance().fromSeed(seedVal, false);
 
-		return FseWallet.builder().fromClassicAddress(w.classicAddress().value()).isTest(w.isTest())
+		return FseWallet.builder().fromClassicAddress(w.classicAddress().value())
 				.fromPrivateKey(w.privateKey().get()).fromSigningPublicKey(w.publicKey()).userSeed(seedVal).build();
 
 	}
@@ -65,7 +65,7 @@ public class WalletController {
 
 		Wallet w = DefaultWalletFactory.getInstance().fromSeed(seed, false);
 
-		return FseWallet.builder().fromClassicAddress(w.classicAddress().value()).isTest(w.isTest())
+		return FseWallet.builder().fromClassicAddress(w.classicAddress().value())
 				.fromPrivateKey(w.privateKey().get()).fromSigningPublicKey(w.publicKey()).userSeed(seed).build();
 
 	}
