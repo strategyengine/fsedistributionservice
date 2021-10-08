@@ -1,17 +1,12 @@
 package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +44,7 @@ import com.google.common.primitives.UnsignedLong;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
+import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -59,24 +55,17 @@ public class XrplClientServiceImpl implements XrplClientService {
 	@Autowired
 	private XrplClient xrplClient;
 
+	@Autowired
+	private BlacklistService blacklistService;
+	
 	private ExecutorService executor = Executors.newFixedThreadPool(100);
 
-	private Set<String> blackListedAddresses = null;
 
 	@PreDestroy
 	public void shutdownExecutor() {
 		executor.shutdown();
 	}
 
-	@PostConstruct
-	public void init() throws Exception {
-
-		try (InputStream inputStream = getClass().getResourceAsStream("/blacklisted.txt");
-				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-			blackListedAddresses = reader.lines().collect(Collectors.toSet());
-		}
-
-	}
 
 	@Override
 	public FseAccount getAccountInfo(String classicAddress) throws Exception {
@@ -177,7 +166,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			log.error("Completely failed to sendFSEPayment " + paymentRequest + " " + toClassicAddress);
 			return FsePaymentResult.builder().reason("Failed max attempts").responseCode("maxAttemptFail").classicAddress(toClassicAddress).build();
 		}
-		if (blackListedAddresses.contains(toClassicAddress)) {
+		if (blacklistService.getBlackListedAddresses().contains(toClassicAddress)) {
 			log.info("Skipping blacklisted address " + toClassicAddress);
 			return FsePaymentResult.builder().reason("Blacklisted Address").responseCode("blacklistedFail").classicAddress(toClassicAddress).build();
 		}

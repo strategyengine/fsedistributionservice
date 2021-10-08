@@ -7,6 +7,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.strategyengine.xrpl.fsedistributionservice.model.FseWallet;
+import com.strategyengine.xrpl.fsedistributionservice.rest.trustlines.WalletController;
 
 @RestController
 public class WalletControllerTest {

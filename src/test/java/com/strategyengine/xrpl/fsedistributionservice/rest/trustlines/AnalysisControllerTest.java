@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.strategyengine.xrpl.fsedistributionservice.rest.trustlines.AnalysisController;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 @RestController
@@ -39,7 +40,7 @@ public class AnalysisControllerTest {
 		
 		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.empty(), true, true)).thenReturn(expected);
 
-		List<FseTrustLine> actual = sut.trustLines(classicAddress, null, true);
+		List<FseTrustLine> actual = sut.trustLines(classicAddress, null, true, true);
 
 		Assertions.assertEquals(expected, actual);
 	}
