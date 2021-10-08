@@ -9,13 +9,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.service.AnalysisService;
+import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
@@ -37,6 +42,12 @@ public class AnalysisServiceImpl implements AnalysisService {
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
 
+	@Autowired
+	private BlacklistService blacklistService;
+
+	@Autowired
+	ObjectMapper objectMapper;
+
 	@Override
 	public Set<String> getPaidAddresses(String classicAddress) {
 		List<FseTransaction> transactions = transactionHistoryService.getTransactions(classicAddress, Optional.empty(),
@@ -48,43 +59,76 @@ public class AnalysisServiceImpl implements AnalysisService {
 
 	@Override
 	public Map<String, List<String>> getActivations(String issuingAddress, String currencyName, int minActivations) {
-
 		try {
-			List<FseTrustLine> trustlinePool = xrplService.getTrustLines(issuingAddress, Optional.of(currencyName),
-					true, false);
 
-			Map<String, List<String>> parentPool = new HashMap<>();
-			for (FseTrustLine trustline : trustlinePool) {
-				try {
-					String activatingAddress = xrplClientService.getActivatingAddress(trustline.getClassicAddress());
+			try {
+				List<FseTrustLine> trustlinePool = xrplService.getTrustLines(issuingAddress, Optional.of(currencyName),
+						true, false);
 
-					if(activatingAddress==null) {
-						continue;
-					}
-					List<String> activatedChildren = parentPool.get(activatingAddress);
-
-					if (activatedChildren == null) {
-						activatedChildren = new ArrayList<String>();
-					}
-					activatedChildren.add(trustline.getClassicAddress());
-					
-					parentPool.put(activatingAddress, activatedChildren);
-					
-
-				} catch (Exception e) {
-					log.error("Error getActivations for trustline " + trustline, e);
+				if (trustlinePool == null) {
+					throw new HttpClientErrorException(HttpStatus.BAD_REQUEST,
+							String.format("No trustlines found for %s %s ", issuingAddress, currencyName));
 				}
-			}
-			
-			//remove keys that do not meet the minimum number of activated children
-			List<String> removeKeys = parentPool.keySet().stream().filter(k -> parentPool.get(k).size() <= minActivations).collect(Collectors.toList());
-			removeKeys.stream().forEach(k -> parentPool.remove(k));
+				Map<String, List<String>> parentPool = new HashMap<>();
+				int count = 0;
+				for (FseTrustLine trustline : trustlinePool) {
+					try {
+						
+						count++;
+						
+						if(blacklistService.getBlackListedAddresses().contains(trustline.getClassicAddress())){
+							//this address is already blacklisted
+							continue;
+						}
+						
+						String activatingAddress = xrplClientService
+								.getActivatingAddress(trustline.getClassicAddress());
 
-			return parentPool;
+						if (activatingAddress == null) {
+							continue;
+						}
+						List<String> activatedChildren = parentPool.get(activatingAddress);
+
+						if (activatedChildren == null) {
+							activatedChildren = new ArrayList<String>();
+						}
+						activatedChildren.add(trustline.getClassicAddress());
+
+						if (trustlinePool.stream().filter(s -> s.getClassicAddress().equals(activatingAddress)).findAny().isEmpty()) {
+							//activating address does not have the trustline, let's assume it is an exchange address that activated many XRP addresses and skip it
+							continue;
+						}
+						
+						parentPool.put(activatingAddress, activatedChildren);
+						log.info("count:{} IssuingAdd: {} Currency: {}  Parent: {} activated address: {}", count,
+								issuingAddress, currencyName, activatingAddress, trustline.getClassicAddress());
+
+					} catch (Exception e) {
+						log.error("Error getActivations for trustline " + trustline, e);
+					}
+				}
+
+				log.info("Parent Child activations: \n" + objectMapper.writeValueAsString(parentPool));
+
+				// remove keys that do not meet the minimum number of activated children
+				List<String> removeKeys = parentPool.keySet().stream()
+						.filter(k -> parentPool.get(k).size() <= minActivations).collect(Collectors.toList());
+				removeKeys.stream().forEach(k -> parentPool.remove(k));
+
+				log.info("Parent Child activations with too many children! : \n"
+						+ objectMapper.writeValueAsString(parentPool));
+
+				return parentPool;
+			} catch (Exception e) {
+				log.error("Error getActivations " + issuingAddress, e);
+			}
+			return null;
+
 		} catch (Exception e) {
-			log.error("Error getActivations " + issuingAddress, e);
+			log.error("Error running analysis", e);
+
+			throw new RuntimeException(e);
 		}
-		return null;
 
 	}
 

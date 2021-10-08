@@ -13,6 +13,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResults;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
+import com.strategyengine.xrpl.fsedistributionservice.rest.trustlines.TrustlinePaymentController;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 @RestController
