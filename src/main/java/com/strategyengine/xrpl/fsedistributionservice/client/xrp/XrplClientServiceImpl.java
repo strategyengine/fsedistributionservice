@@ -166,7 +166,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			log.error("Completely failed to sendFSEPayment " + paymentRequest + " " + toClassicAddress);
 			return FsePaymentResult.builder().reason("Failed max attempts").responseCode("maxAttemptFail").classicAddress(toClassicAddress).build();
 		}
-		if (!paymentRequest.isPayBlacklistedaddresses() && blacklistService.getBlackListedAddresses().contains(toClassicAddress)) {
+		if (!paymentRequest.isPayBlacklistedAddresses() && blacklistService.getBlackListedAddresses().contains(toClassicAddress)) {
 			log.info("Skipping blacklisted address " + toClassicAddress);
 			return FsePaymentResult.builder().reason("Blacklisted Address").responseCode("blacklistedFail").classicAddress(toClassicAddress).build();
 		}

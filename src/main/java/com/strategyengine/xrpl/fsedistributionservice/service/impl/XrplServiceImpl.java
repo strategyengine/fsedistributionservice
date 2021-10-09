@@ -131,7 +131,7 @@ public class XrplServiceImpl implements XrplService {
 					"This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
 		}
 		validationService.validate(paymentRequest);
-		allowPayment(paymentRequest.toBuilder().amount(SERVICE_FEE).currencyName("XRP")
+		allowPayment(paymentRequest.toBuilder().payBlacklistedAddresses(paymentRequest.isPayBlacklistedAddresses()).amount(SERVICE_FEE).currencyName("XRP")
 				.toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build(), new AtomicInteger(0));
 
 		List<FsePaymentResult> results = allowPayment(paymentRequest, new AtomicInteger(0));
@@ -219,7 +219,7 @@ public class XrplServiceImpl implements XrplService {
 
 		// pay service fee
 		allowPayment(
-				FsePaymentRequest.builder().trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
+				FsePaymentRequest.builder().payBlacklistedAddresses(true).trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
 						.currencyName("XRP").amount(SERVICE_FEE).fromClassicAddress(p.getFromClassicAddress())
 						.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
 						.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build(),

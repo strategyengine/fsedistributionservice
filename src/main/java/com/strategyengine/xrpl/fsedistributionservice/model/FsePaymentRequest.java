@@ -61,5 +61,5 @@ public class FsePaymentRequest {
 	private boolean agreeFee;
 
 	@ApiModelProperty(value="If true, then this payment will also go to blacklisted addresses", required=true)
-	private boolean payBlacklistedaddresses;
+	private boolean payBlacklistedAddresses;
 }
