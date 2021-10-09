@@ -141,7 +141,7 @@ public class AnalysisController {
 			@ApiParam(value = "OPTIONAL Minimum activations to return a parent. Default is 20 For example 10, will only return parent addresses that have activated 10 or more addresses containing this trustline", required = true) @RequestParam(value="minActivations", required=false, defaultValue = "20") int minActivations) {
 		
 		//TODO uncomment this to be able to run an analysis on addresses to blacklist
-		return ImmutableMap.of("This is processor intesive so not allowed on the server.  See if @_Bear_Bull will run it for you or run it on your local.  (To run locally, comment line 147 and uncomment line 147 in AnalysisController.java)", Lists.newArrayList());
+		return ImmutableMap.of("This is processor intesive so not allowed on the server.  See if @_Bear_Bull will run it for you or run it on your local.  (To run locally, comment line 147 and uncomment line 144 in AnalysisController.java)", Lists.newArrayList());
 		
 		//TODO remove comments here to run an analysis on addresses to blacklist
 //		return analysisService.getActivations(issuingAddress, currencyName, minActivations);
