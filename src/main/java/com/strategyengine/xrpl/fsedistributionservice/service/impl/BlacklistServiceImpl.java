@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 
 import lombok.extern.log4j.Log4j2;
@@ -28,8 +29,9 @@ public class BlacklistServiceImpl implements BlacklistService {
 
 	private Map<String, List<String>> blackListedFromAnalysis = new HashMap<>();
 
+	@VisibleForTesting
 	@Autowired
-	private ObjectMapper objectMapper;
+	protected ObjectMapper objectMapper;
 
 	@PostConstruct
 	public void init() throws Exception {

@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
@@ -41,12 +40,14 @@ public class AnalysisServiceImpl implements AnalysisService {
 	@VisibleForTesting
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
-
+	
+	@VisibleForTesting
 	@Autowired
-	private BlacklistService blacklistService;
-
+	protected BlacklistService blacklistService;
+	
+	@VisibleForTesting
 	@Autowired
-	ObjectMapper objectMapper;
+	protected ObjectMapper objectMapper;
 
 	@Override
 	public Set<String> getPaidAddresses(String classicAddress) {
@@ -73,14 +74,14 @@ public class AnalysisServiceImpl implements AnalysisService {
 				int count = 0;
 				for (FseTrustLine trustline : trustlinePool) {
 					try {
-						
+
 						count++;
-						
-						if(blacklistService.getBlackListedAddresses().contains(trustline.getClassicAddress())){
-							//this address is already blacklisted
+
+						if (blacklistService.getBlackListedAddresses().contains(trustline.getClassicAddress())) {
+							// this address is already blacklisted
 							continue;
 						}
-						
+
 						String activatingAddress = xrplClientService
 								.getActivatingAddress(trustline.getClassicAddress());
 
@@ -94,11 +95,13 @@ public class AnalysisServiceImpl implements AnalysisService {
 						}
 						activatedChildren.add(trustline.getClassicAddress());
 
-						if (trustlinePool.stream().filter(s -> s.getClassicAddress().equals(activatingAddress)).findAny().isEmpty()) {
-							//activating address does not have the trustline, let's assume it is an exchange address that activated many XRP addresses and skip it
+						if (trustlinePool.stream().filter(s -> s.getClassicAddress().equals(activatingAddress))
+								.findAny().isEmpty()) {
+							// activating address does not have the trustline, let's assume it is an
+							// exchange address that activated many XRP addresses and skip it
 							continue;
 						}
-						
+
 						parentPool.put(activatingAddress, activatedChildren);
 						log.info("count:{} IssuingAdd: {} Currency: {}  Parent: {} activated address: {}", count,
 								issuingAddress, currencyName, activatingAddress, trustline.getClassicAddress());

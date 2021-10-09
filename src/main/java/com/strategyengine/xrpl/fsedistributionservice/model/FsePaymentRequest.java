@@ -58,6 +58,8 @@ public class FsePaymentRequest {
 	private String currencyName;
 
 	@ApiModelProperty(value="I agree to the " + XrplServiceImpl.SERVICE_FEE + " XRP fee to use this service", required=true)
-	@NonNull
 	private boolean agreeFee;
+
+	@ApiModelProperty(value="If true, then this payment will also go to blacklisted addresses", required=true)
+	private boolean payBlacklistedaddresses;
 }
