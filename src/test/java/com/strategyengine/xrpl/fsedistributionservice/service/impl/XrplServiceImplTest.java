@@ -193,7 +193,7 @@ public class XrplServiceImplTest {
 				payment.getCurrencyName(), payment.getTrustlineIssuerClassicAddress()))
 				.thenReturn(Sets.newHashSet(payment.getToClassicAddresses()));
 
-		FsePaymentResults expected = FsePaymentResults.builder().build();
+		FsePaymentResults expected = FsePaymentResults.builder().results(ImmutableList.of(FsePaymentResult.builder().build())).build();
 
 		FseAccount fseAccount = FseAccount.builder().xrpBalance(new BigDecimal("0.000002"))
 				.classicAddress(classicAddress).build();
@@ -206,6 +206,7 @@ public class XrplServiceImplTest {
 
 		FsePaymentResults actual = sut.sendFsePaymentToTrustlines(request);
 
+		expected.getResults().get(0).setReason(actual.getResults().get(0).getReason());
 		Assertions.assertEquals(expected, actual);
 
 	}

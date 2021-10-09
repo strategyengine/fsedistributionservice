@@ -67,7 +67,8 @@ public class XrplServiceImpl implements XrplService {
 
 	@Cacheable("trustline-cache")
 	@Override
-	public List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes, boolean sortByRich) {
+	public List<FseTrustLine> getTrustLines(String classicAddress, Optional<String> currency, boolean includes,
+			boolean sortByRich) {
 		try {
 
 			validationService.validateClassicAddress(classicAddress);
@@ -79,10 +80,11 @@ public class XrplServiceImpl implements XrplService {
 							.balance(t.balance().replaceFirst("-", "")).build())
 					.collect(Collectors.toList());
 
-			if(sortByRich) {
-				fseTrustLines.sort((a, b) -> (Double.valueOf(a.getBalance()).compareTo(Double.valueOf(b.getBalance()))));
-			}else {
-				//put the oldest trustlines first, OG sort
+			if (sortByRich) {
+				fseTrustLines
+						.sort((a, b) -> (Double.valueOf(a.getBalance()).compareTo(Double.valueOf(b.getBalance()))));
+			} else {
+				// put the oldest trustlines first, OG sort
 				Collections.reverse(fseTrustLines);
 			}
 			return fseTrustLines;
@@ -111,11 +113,10 @@ public class XrplServiceImpl implements XrplService {
 		return classicAddresses.stream().map(a -> getAccountInfo(a)).collect(Collectors.toList());
 	}
 
-		
 	private FseAccount getAccountInfo(String classicAddress) {
 		validationService.validateClassicAddress(classicAddress);
 		try {
-			FseAccount account =  xrplClientService.getAccountInfo(classicAddress);
+			FseAccount account = xrplClientService.getAccountInfo(classicAddress);
 
 			return account.toBuilder().trustLines(getTrustLines(classicAddress, true)).build();
 		} catch (Exception e) {
@@ -131,8 +132,9 @@ public class XrplServiceImpl implements XrplService {
 					"This transactions requires you to agree to the service fee.  Help keep this service running in the cloud");
 		}
 		validationService.validate(paymentRequest);
-		allowPayment(paymentRequest.toBuilder().payBlacklistedAddresses(paymentRequest.isPayBlacklistedAddresses()).amount(SERVICE_FEE).currencyName("XRP")
-				.toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS)).build(), new AtomicInteger(0));
+		allowPayment(paymentRequest.toBuilder().payBlacklistedAddresses(paymentRequest.isPayBlacklistedAddresses())
+				.amount(SERVICE_FEE).currencyName("XRP").toClassicAddresses(ImmutableList.of(SERVICE_FEE_ADDRESS))
+				.build(), new AtomicInteger(0));
 
 		List<FsePaymentResult> results = allowPayment(paymentRequest, new AtomicInteger(0));
 		return results;
@@ -195,35 +197,44 @@ public class XrplServiceImpl implements XrplService {
 				// again
 				.collect(Collectors.toList());
 
-		
 		Optional<FseTrustLine> fromAddressTrustLine = trustLines.stream()
 				.filter(t -> p.getFromClassicAddress().equals(t.getClassicAddress())
 						&& p.getCurrencyName().equals(t.getCurrency()))
 				.findFirst();
-		
-		if(p.getMaximumTrustlines()!=null &&  p.getMaximumTrustlines() < trustLines.size()) {
-			
+
+		if (eligibleTrustLines.isEmpty()) {
+			String message = String.format("No eligible addresses found for issuingAddress %s currency %s newOnly:%s",
+					p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), p.isNewTrustlinesOnly());
+			return FsePaymentResults.builder()
+					.results(ImmutableList.of(FsePaymentResult.builder().reason(message).build())).build();
+		}
+
+		if (p.getMaximumTrustlines() != null && p.getMaximumTrustlines() < trustLines.size()) {
+
 			eligibleTrustLines = eligibleTrustLines.subList(0, p.getMaximumTrustlines());
 		}
 
 		FseAccount fromAccount = getAccountInfo(p.getFromClassicAddress());
-
 
 		validationService.validateXrpBalance(fromAccount.getXrpBalance(), eligibleTrustLines.size());
 		validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(),
 				eligibleTrustLines.size());
 
 		if (eligibleTrustLines.isEmpty()) {
-			return FsePaymentResults.builder().build();
+			String message = String.format(
+					"No eligible addresses found for issuingAddress %s currency %s newOnly:%s maxTrustLines:%s",
+					p.getTrustlineIssuerClassicAddress(), p.getCurrencyName(), p.isNewTrustlinesOnly(),
+					p.getMaximumTrustlines());
+			return FsePaymentResults.builder()
+					.results(ImmutableList.of(FsePaymentResult.builder().reason(message).build())).build();
 		}
 
 		// pay service fee
-		allowPayment(
-				FsePaymentRequest.builder().payBlacklistedAddresses(true).trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-						.currencyName("XRP").amount(SERVICE_FEE).fromClassicAddress(p.getFromClassicAddress())
-						.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
-						.toClassicAddresses(asList(SERVICE_FEE_ADDRESS)).build(),
-				new AtomicInteger(0));
+		allowPayment(FsePaymentRequest.builder().payBlacklistedAddresses(true)
+				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).currencyName("XRP")
+				.amount(SERVICE_FEE).fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
+				.fromSigningPublicKey(p.getFromSigningPublicKey()).toClassicAddresses(asList(SERVICE_FEE_ADDRESS))
+				.build(), new AtomicInteger(0));
 
 		log.info("Found eligible TrustLines to send to.  Size: {}", eligibleTrustLines.size());
 
@@ -233,9 +244,11 @@ public class XrplServiceImpl implements XrplService {
 				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).currencyName(p.getCurrencyName())
 				.amount(p.getAmount()).agreeFee(p.isAgreeFee()).fromClassicAddress(p.getFromClassicAddress())
 				.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
-				.toClassicAddresses(asList(t.getClassicAddress())).build(), count)).flatMap(List::stream).collect(Collectors.toList());
-		
-		return FsePaymentResults.builder().results(results).start(startTime).end(new Date()).transactionCount(count.get()).build();
+				.toClassicAddresses(asList(t.getClassicAddress())).build(), count)).flatMap(List::stream)
+				.collect(Collectors.toList());
+
+		return FsePaymentResults.builder().results(results).start(startTime).end(new Date())
+				.transactionCount(count.get()).build();
 
 	}
 
