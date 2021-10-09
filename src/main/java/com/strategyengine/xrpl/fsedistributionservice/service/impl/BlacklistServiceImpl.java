@@ -13,10 +13,13 @@ import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 
 import lombok.extern.log4j.Log4j2;
@@ -38,7 +41,7 @@ public class BlacklistServiceImpl implements BlacklistService {
 
 		try (InputStream inputStream = getClass().getResourceAsStream("/blacklisted.txt");
 				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-			blackListedAddresses = reader.lines().collect(Collectors.toSet());
+			blackListedAddresses = reader.lines().filter(s -> !StringUtils.isEmpty(s) && !s.startsWith("#")).collect(Collectors.toSet());
 		}
 
 		try (InputStream inputStream = getClass().getResourceAsStream("/blacklist_analysis_fse.json");
@@ -85,6 +88,8 @@ public class BlacklistServiceImpl implements BlacklistService {
 
 			blackListedFromAnalysis.putAll(blackListedFromAnalysisSse);
 		}
+		
+		blackListedFromAnalysis.putAll(ImmutableMap.of("scammers", blackListedAddresses.stream().collect(Collectors.toList())));
 
 	}
 
