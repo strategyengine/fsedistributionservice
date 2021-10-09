@@ -52,6 +52,19 @@ public class TrustlinePaymentController {
 	@RequestMapping(value = "/api/payment", method = RequestMethod.POST)
 	public FsePaymentResults payment(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
+
+		log.info(
+				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} agreeFee:{} payBlacklisted:{} addressesToPay:{}"
+					, paymentRequest.getFromClassicAddress(),
+				paymentRequest.getFromSigningPublicKey(), 
+				paymentRequest.getAmount(),
+				paymentRequest.getTrustlineIssuerClassicAddress(), 
+				paymentRequest.getCurrencyName(),
+				paymentRequest.isAgreeFee(),
+				paymentRequest.isPayBlacklistedAddresses(),
+				paymentRequest.getToClassicAddresses()
+				);
+		
 		if("String".equals(paymentRequest.getDestinationTag())||StringUtils.isEmpty(paymentRequest.getDestinationTag())) {
 			paymentRequest.setDestinationTag(null);
 		}
@@ -67,11 +80,12 @@ public class TrustlinePaymentController {
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesRequest paymentRequest) {
 		// DO NOT LOG THE PRIVATE KEY!!
 		log.info(
-				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} maxTrustlines:{} agreeFee:{} newTrustlinesOnly:{}"
+				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} maxTrustlines:{} agreeFee:{} newTrustlinesOnly:{} payBlacklisted:{}"
 					, paymentRequest.getFromClassicAddress(),
 				paymentRequest.getFromSigningPublicKey(), paymentRequest.getAmount(),
 				paymentRequest.getTrustlineIssuerClassicAddress(), paymentRequest.getCurrencyName(),
-				paymentRequest.getMaximumTrustlines(), paymentRequest.isAgreeFee(), paymentRequest.isNewTrustlinesOnly()
+				paymentRequest.getMaximumTrustlines(), paymentRequest.isAgreeFee(), paymentRequest.isNewTrustlinesOnly(),
+				paymentRequest.isPayBlacklistedAddresses()
 				);
 		return xrplService.sendFsePaymentToTrustlines(paymentRequest);
 	}
