@@ -209,7 +209,7 @@ public class XrplServiceImpl implements XrplService {
 					.results(ImmutableList.of(FsePaymentResult.builder().reason(message).build())).build();
 		}
 
-		if (p.getMaximumTrustlines() != null && p.getMaximumTrustlines() < trustLines.size()) {
+		if (p.getMaximumTrustlines() != null && eligibleTrustLines.size() > p.getMaximumTrustlines() &&  p.getMaximumTrustlines() < trustLines.size()) {
 
 			eligibleTrustLines = eligibleTrustLines.subList(0, p.getMaximumTrustlines());
 		}
