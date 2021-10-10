@@ -1,5 +1,8 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,22 +28,36 @@ public class BlacklistServiceImplTest {
 		sut.init();
 	}
 
-//	@Test
-	public void testGetAll() {
+	@Test
+	public void testGetAll() throws Exception{
 
 		Map<String, List<String>> bl = sut.getBlackListedFromAnalysis();
 		
 		
 		String largestKey = null;
 		
+		List<String> removeKeys = new ArrayList<>();
+		
 		for(String key : bl.keySet()) {
 			if(largestKey ==null || bl.get(key).size() > bl.get(largestKey).size()) {
 				largestKey = key;
 			}
+			
+			if( bl.get(key).size() < 39) {
+				removeKeys.add(key);
+			}
 		}
+		removeKeys.stream().forEach(k -> bl.remove(k));
+	
+		String json = new ObjectMapper().writeValueAsString(bl);
 		
-		Assertions.assertEquals("rMeAdAJyR42WzGnphfwSJfQGk6r7kvSWeB", largestKey);
-		Assertions.assertEquals(527, bl.get(largestKey).size());
+		File f = new File("temp.json");
+		f.createNewFile();
+		FileWriter fw = new		FileWriter(f);
+		
+		fw.write(json);
+		fw.close();
+		System.out.println(json);
 	}
 
 //	@Test
