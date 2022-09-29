@@ -12,4 +12,6 @@ public interface ConfigService {
 
 	String getSomeSecSaltySauce();
 
+	String getScamAcountKey();
+
 }

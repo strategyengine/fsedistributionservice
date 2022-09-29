@@ -2,6 +2,8 @@ package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
@@ -18,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.model.ScammerAddress;
+import com.strategyengine.xrpl.fsedistributionservice.service.ConfigService;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -27,7 +30,7 @@ public class ScamAccountsClientImpl implements ScamAccountsClient {
 
 	private String url_scammers = "https://api.xrplorer.com/custom/airdropfarmingaccounts/";
 
-	private String key = "680817af-faf6-4f11-b3bc-ba87217553c2";
+	private String key = null;
 
 	@Autowired
 	private ObjectMapper objectMapper;
@@ -35,6 +38,18 @@ public class ScamAccountsClientImpl implements ScamAccountsClient {
 	@Qualifier("scammerLookupRestTemplate")
 	@Autowired
 	private RestTemplate restTemplate;
+	
+	@Autowired
+	private ConfigService configService;
+	
+	
+	@PostConstruct
+	public void init() {
+		
+		key = configService.getScamAcountKey();
+		
+	}
+	
 
 	/**
 	 * API: https://api.xrplorer.com/custom/airdropfarmingaccounts
@@ -57,6 +72,9 @@ public class ScamAccountsClientImpl implements ScamAccountsClient {
 	@Override
 	public List<ScammerAddress> getScammers(int page) {
 
+		if(key == null) {
+			return ImmutableList.of();
+		}
 		String url = url_scammers + "?per_page=100&page=" + page;
 
 		try {

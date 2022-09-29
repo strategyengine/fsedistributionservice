@@ -61,4 +61,16 @@ public class ConfigServiceImpl implements ConfigService {
 		
 		return config.get().getValue();
 	}
+
+
+	@Override
+	public String getScamAcountKey() {
+		
+		Optional<ConfigEnt> config = configRepo.findOne(Example.of(ConfigEnt.builder().key("SCAM.ACCOUNT.KEY").build()));
+		if(config.isEmpty()) {
+			return null;
+		}
+		return config.get().getValue();
+		
+	}
 }
