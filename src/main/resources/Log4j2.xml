@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration name="Default" status="INFO">
+	<Properties>
+		<Property name="appender">${sys:LOG4J2_APPENDER:-local}</Property>
+	</Properties>
+	<Appenders>
+		<Console target="SYSTEM_OUT">
+			<PatternLayout pattern="%d [%t] %p %c %x - %m" />
+		</Console>
+	</Appenders>
+	<Loggers>
+		<Logger name="com.zaxxer.hikari.pool.ProxyLeakTask" level="FATAL">
+			<AppenderRef ref="${appender}" />
+		</Logger>
+		<Root level="INFO">
+			<AppenderRef ref="${appender}" />
+		</Root>
+	</Loggers>
+</Configuration>

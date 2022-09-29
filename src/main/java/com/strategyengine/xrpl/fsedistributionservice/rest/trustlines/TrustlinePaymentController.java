@@ -1,10 +1,11 @@
 package com.strategyengine.xrpl.fsedistributionservice.rest.trustlines;
 
-import java.util.Date;
-import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.StringUtils;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -13,11 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.google.common.annotations.VisibleForTesting;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
-import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResults;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
-import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
+import com.strategyengine.xrpl.fsedistributionservice.model.PaymentsChange;
+import com.strategyengine.xrpl.fsedistributionservice.model.RetryPaymentRequest;
+import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
+import com.strategyengine.xrpl.fsedistributionservice.service.ConfigService;
+import com.strategyengine.xrpl.fsedistributionservice.service.PaymentsChangeService;
+import com.strategyengine.xrpl.fsedistributionservice.service.RetryFailedPaymentsService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
-import com.strategyengine.xrpl.fsedistributionservice.service.TrustlineTriggerDropService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 import io.swagger.annotations.Api;
@@ -33,81 +37,117 @@ public class TrustlinePaymentController {
 	@VisibleForTesting
 	@Autowired
 	protected XrplService xrplService;
-	
+
 	@VisibleForTesting
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
+	
 
 	@VisibleForTesting
 	@Autowired
-	protected TrustlineTriggerDropService trustlineTriggerDropService;
+	protected ConfigService configService;
 
 	@VisibleForTesting
 	@Autowired
-	protected AirdropSummaryService airdropSummaryService;
-		
+	protected PaymentsChangeService paymentsChangeService;
 
 
+	@VisibleForTesting
+	@Autowired
+	protected RetryFailedPaymentsService retryFailedPaymentsService;
+
+	
 	@ApiOperation(value = "Distributes tokens to a set of recipient addresses")
 	@RequestMapping(value = "/api/payment", method = RequestMethod.POST)
-	public FsePaymentResults payment(
+	public ResponseEntity<Void> payment(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
 
+		if(!configService.isAirdropEnabled()) {
+			throw new BadRequestException("Airdrops currently disabled");
+		}
 		log.info(
-				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} agreeFee:{} payBlacklisted:{} addressesToPay:{}"
-					, paymentRequest.getFromClassicAddress(),
-				paymentRequest.getFromSigningPublicKey(), 
-				paymentRequest.getAmount(),
-				paymentRequest.getTrustlineIssuerClassicAddress(), 
-				paymentRequest.getCurrencyName(),
-				paymentRequest.isAgreeFee(),
-				paymentRequest.isPayBlacklistedAddresses(),
-				paymentRequest.getToClassicAddresses()
-				);
-		
-		if("String".equals(paymentRequest.getDestinationTag())||StringUtils.isEmpty(paymentRequest.getDestinationTag())) {
+				"api/payment: specific addresses - fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} agreeFee:{} addressesToPay:{}",
+				paymentRequest.getFromClassicAddress(), paymentRequest.getFromSigningPublicKey(),
+				paymentRequest.getAmount(), paymentRequest.getTrustlineIssuerClassicAddress(),
+				paymentRequest.getCurrencyName(), paymentRequest.isAgreeFee(), paymentRequest.getToClassicAddresses());
+
+		if ("String".equals(paymentRequest.getDestinationTag())
+				|| ObjectUtils.isEmpty(paymentRequest.getDestinationTag())) {
 			paymentRequest.setDestinationTag(null);
 		}
-		Date start = new Date();
-		List<FsePaymentResult> results = xrplService.sendFsePayment(paymentRequest);
-		return FsePaymentResults.builder().end(new Date()).start(start).results(results).transactionCount(results.size()).build();
+		
+		xrplService.sendFsePayment(paymentRequest);
+		return ResponseEntity.ok().build();
 	}
-
 
 	@ApiOperation(value = "Distributes tokens to trustline holders.  Airdrop")
 	@RequestMapping(value = "/api/payment/trustlines", method = RequestMethod.POST)
-	public FsePaymentResults paymentTrustlines(
+	public ResponseEntity<Void> paymentTrustlines(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesRequest paymentRequest) {
+		
+		if(!configService.isAirdropEnabled()) {
+			throw new BadRequestException("Airdrops currently disabled");
+		}
+		
 		// DO NOT LOG THE PRIVATE KEY!!
 		log.info(
-				"payment/trustlines: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} maxTrustlines:{} agreeFee:{} newTrustlinesOnly:{} payBlacklisted:{}"
-					, paymentRequest.getFromClassicAddress(),
-				paymentRequest.getFromSigningPublicKey(), paymentRequest.getAmount(),
-				paymentRequest.getTrustlineIssuerClassicAddress(), paymentRequest.getCurrencyName(),
-				paymentRequest.getMaximumTrustlines(), paymentRequest.isAgreeFee(), paymentRequest.isNewTrustlinesOnly(),
-				paymentRequest.isPayBlacklistedAddresses()
-				);
-		return xrplService.sendFsePaymentToTrustlines(paymentRequest);
+				"payment/trustlines: {}",
+				paymentRequest);
+
+		xrplService.sendFsePaymentToTrustlines(paymentRequest, null);
+
+		return ResponseEntity.ok().build();
 	}
 
+	@ApiOperation(value = "Cancels a running Airdrop")
+	@RequestMapping(value = "/api/payment/trustlines/cancel", method = RequestMethod.POST)
+	public ResponseEntity<FsePaymentRequest> paymentTrustlines(
+			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
+		
+		//only the private key and issuing address are populated
+		
+		// DO NOT LOG THE PRIVATE KEY!!
+		log.info(
+				"payment/trustlines/cancel");
+
+		FsePaymentRequest result = xrplService.cancelJob(paymentRequest.getFromPrivateKey(), paymentRequest.getTrustlineIssuerClassicAddress());
+		
+		return ResponseEntity.of(Optional.ofNullable(result));
+
+	}
 	
-	//commenting so it's not used on the server
-//	@ApiOperation(value = "Distributes tokens to trustline holders only after a minimum number of trustlines have been created.  Thread will check on number of trustlines in 10 minute intervals until minimum number is reached.")
-//	@RequestMapping(value = "/api/payment/trustlines/min/airdrop", method = RequestMethod.POST)
-//	public void paymentTrustlinesMinAirdrop(
-//			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesMinTriggeredRequest paymentRequest) {
-//
-//		// DO NOT LOG THE PRIVATE KEY!!
-//		log.info(
-//				"payment/trustlines/min/airdrop: fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{}"
-//						, paymentRequest.getTrustlinePaymentRequest().getFromClassicAddress(),
-//				paymentRequest.getTrustlinePaymentRequest().getFromSigningPublicKey(),
-//				paymentRequest.getTrustlinePaymentRequest().getAmount(),
-//				paymentRequest.getTrustlinePaymentRequest().getTrustlineIssuerClassicAddress());
-//
-//		// this will block a http accept thread. Add a thread pool to call this if you
-//		// are going to call a lot of these.
-//		trustlineTriggerDropService.triggerAirdropAfterMinTrustlines(paymentRequest);
-//	}
+	@ApiOperation(value = "Distributes tokens to a set of recipient addresses")
+	@RequestMapping(value = "/api/payment/retryfailed", method = RequestMethod.POST)
+	public ResponseEntity<FsePaymentResult> retryFailedPayment(
+			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody RetryPaymentRequest retryPaymentRequest) {
+
+		if(!configService.isAirdropEnabled()) {
+			throw new BadRequestException("Airdrops currently disabled");
+		}
+		log.info(
+				"payment/trustlines/retryfailed: dropRequestId {}",
+				retryPaymentRequest);
+
+		
+		FsePaymentResult r = retryFailedPaymentsService.retryFailedPayments(retryPaymentRequest);
+		return ResponseEntity.ok(r);
+	}
+	
+	@ApiOperation(value = "Change amounts to pay to specific addresses")
+	@RequestMapping(value = "/api/payment/change", method = RequestMethod.POST)
+	public void changePaymentAmounts(
+			@ApiParam(value = "Payments Change", required = true) @RequestBody PaymentsChange paymentsChange) {
+
+			paymentsChangeService.updatePaymentAmounts(paymentsChange);
+	}
+	
+	@ApiOperation(value = "Change amounts to pay to specific addresses")
+	@RequestMapping(value = "/api/payment/delete/{dropRecipientId}", method = RequestMethod.POST)
+	public void deletePayment(
+			@ApiParam(value = "Drop recipient id", required = true) @PathVariable("dropRecipientId") Long dropRecipientId,
+			@ApiParam(value = "Payments Delete", required = true) @RequestBody PaymentsChange paymentsChange) {
+
+			paymentsChangeService.removeRecipient(dropRecipientId, paymentsChange.getPrivateKey());
+	}
 
 }

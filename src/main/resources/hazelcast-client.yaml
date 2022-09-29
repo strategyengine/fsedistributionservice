@@ -1,0 +1,5 @@
+hazelcast-client:
+  network:
+    cluster-members:
+      - 10.0.0.33
+      - cache

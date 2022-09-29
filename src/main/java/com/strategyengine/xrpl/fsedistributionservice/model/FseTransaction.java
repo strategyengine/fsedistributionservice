@@ -1,5 +1,6 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -18,8 +19,10 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter
-public class FseTransaction {
+public class FseTransaction implements Serializable {
 
+
+	private static final long serialVersionUID = -7014861027169979326L;
 	private Date transactionDate;
 	private BigDecimal amount;
 	private String toAddress;
@@ -28,4 +31,7 @@ public class FseTransaction {
 	private String issuerAddress;
 	private String transactionType;
 	private Long ledgerIndex;
+	private String transactionHash;
+	private String resultCode;
+	private String reason;
 }

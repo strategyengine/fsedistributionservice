@@ -1,6 +1,8 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
-import com.strategyengine.xrpl.fsedistributionservice.service.impl.XrplServiceImpl;
+import java.io.Serializable;
+
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -21,7 +23,9 @@ import lombok.ToString;
 @AllArgsConstructor
 @Setter
 @ApiModel(value = "POST parameters to send tokens addresses with trustlines for the token")
-public class FsePaymentTrustlinesRequest {
+public class FsePaymentTrustlinesRequest implements Serializable {
+
+	private static final long serialVersionUID = 8073142123190892467L;
 
 	@ApiModelProperty(value = "XRP address from wallet that is sending the token.  Example rnL2P..", required = true)
 	@NonNull
@@ -33,6 +37,7 @@ public class FsePaymentTrustlinesRequest {
 
 	@ApiModelProperty(value = "XRP private key from wallet that is sending the token.  Example ED419C91A68F5...", required = true)
 	@NonNull
+	@ToString.Exclude
 	private String fromPrivateKey;
 
 	@ApiModelProperty(value = "XRP address of the issuer of this currency.  Example rn2J..", required = true)
@@ -43,22 +48,45 @@ public class FsePaymentTrustlinesRequest {
 	@NonNull
 	private String currencyName;
 
-	@ApiModelProperty(value = "Amount of tokens that will be distributed to each recipient address.  Example .589", required = true)
+	@ApiModelProperty(value = "Each trustline will receive this amount.  Example .589", required = true)
 	@NonNull
 	private String amount;
 
 	@ApiModelProperty(value = "If true, then only recipients who have never recieved one of your airdrops will receive one.  DEFAULT VALUE: FALSE")
 	private boolean newTrustlinesOnly;
 
-	@ApiModelProperty(value = "I agree to the " + XrplServiceImpl.SERVICE_FEE
-			+ " XRP fee to use this service", required = true)
+	@ApiModelProperty(value = "If true, then only recipients who have been verified with Global.ID will receive the airdrop")
+	private boolean globalIdVerified;
+	
+	@ApiModelProperty(value = "OPTIONAL: If true, then the blacklist will be used to filter scam addresses")
+	private boolean useBlacklist;
+
+	@ApiModelProperty(value="I agree to the service fee per recipients to use this service", required=true)
 	@NonNull
 	private boolean agreeFee;
 
 	@ApiModelProperty(value = "OPTIONAL:  The maximum number of trustlines to send to.   Sorted by oldest, so if set to 10 then only the oldest 10 trustlines will receive this drop.  If set to 50000 but there are only 10000 actual trustlines, then all 10000 will receive the drop.   You can leave the attribute out to send to everyone", required = false)
 	private Integer maximumTrustlines;
+
+	@ApiModelProperty(value = "OPTIONAL:  Only pay trustlines having a token balance of the value or more.", required = false)
+	private Double minBalance;
+
+	@ApiModelProperty(value = "OPTIONAL:  Only pay trustlines having a token balance of the value or less.", required = false)	
+	private Double maxBalance;
 	
-	@ApiModelProperty(value="If true, then this payment will also go to blacklisted addresses", required=true)
-	private boolean payBlacklistedAddresses;
+	@ApiModelProperty(value="OPTIONAL: The max XRP fee you are willing to pay per transaction", required=false)
+	private String maxXrpFeePerTransaction;
+	
+	@ApiModelProperty(value = "OPTIONAL: Retry of other airdrop id")
+	private Long retryOfId;
+	
+	@ApiModelProperty(value = "FLAT or PROPORTIONAL.  Flat payments pay the exact amount to each recipient.  Proportional pays the amount * the recipients balance")
+	private PaymentType paymentType;
+
+	@ApiModelProperty(value = "XRP address of the issuer of this currency if different from the sending currency.  Example rn2J..", required = true)
+	private String snapshotTrustlineIssuerClassicAddress;
+
+	@ApiModelProperty(value = "Currency used for the snapshot if different from the sending currency.  Example FSE", required = true)
+	private String snapshotCurrencyName;
 
 }

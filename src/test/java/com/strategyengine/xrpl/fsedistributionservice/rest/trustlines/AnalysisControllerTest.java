@@ -13,8 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
+import com.strategyengine.xrpl.fsedistributionservice.model.FseSort;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
-import com.strategyengine.xrpl.fsedistributionservice.rest.trustlines.AnalysisController;
+import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 @RestController
@@ -22,6 +23,9 @@ public class AnalysisControllerTest {
 
 	@Mock
 	private XrplService xrplService;
+	
+	@Mock
+	private CurrencyHexService currencyHexService;
 
 	private AnalysisController sut;
 
@@ -32,14 +36,15 @@ public class AnalysisControllerTest {
 		MockitoAnnotations.openMocks(this);
 		sut = new AnalysisController();
 		sut.xrplService = xrplService;
+		sut.currencyHexService = currencyHexService;
 	}
 
 	@Test
 	public void testTrustLines() {
 		List<FseTrustLine> expected = trustLines();
 		
-		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.empty(), true, true)).thenReturn(expected);
-
+		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.of(""), Optional.empty(), true, FseSort.RICH)).thenReturn(expected);
+		Mockito.when(currencyHexService.fixCurrencyCode(null)).thenReturn("");
 		List<FseTrustLine> actual = sut.trustLines(classicAddress, null, true, true);
 
 		Assertions.assertEquals(expected, actual);
@@ -53,9 +58,9 @@ public class AnalysisControllerTest {
 	public void testAccountInfo() {
 		List<FseAccount> expected = ImmutableList.of( accountInfo());
 		
-		Mockito.when(xrplService.getAccountInfo(ImmutableList.of(classicAddress))).thenReturn(expected);
+		Mockito.when(xrplService.getAccountInfo(ImmutableList.of(classicAddress), true)).thenReturn(expected);
 
-		List<FseAccount> actual = sut.accountInfo(ImmutableList.of(classicAddress));
+		List<FseAccount> actual = sut.accountInfo(ImmutableList.of(classicAddress), true);
 
 		Assertions.assertEquals(expected, actual);
 	}

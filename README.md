@@ -1,6 +1,6 @@
 # strategyengine token distribution rest service
 
-This service also runs here -- https://fsedistributionservice-56gpv2b23a-uc.a.run.app/
+This service also runs here -- https://strategyengine.one/api/distribution/swagger-ui.html
 
 #How to run locally
 1. Install https://jdk.java.net/java-se-ri/11 

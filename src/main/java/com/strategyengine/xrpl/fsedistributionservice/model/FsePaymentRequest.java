@@ -1,8 +1,9 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.io.Serializable;
 import java.util.List;
 
-import com.strategyengine.xrpl.fsedistributionservice.service.impl.XrplServiceImpl;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -23,7 +24,9 @@ import lombok.ToString;
 @AllArgsConstructor
 @Setter
 @ApiModel(value="POST parameters to send tokens to one or more recipients")
-public class FsePaymentRequest {
+public class FsePaymentRequest implements Serializable {
+
+	private static final long serialVersionUID = -479433688201661621L;
 
 	@ApiModelProperty(value="XRP address from wallet that is sending the token.  Example rnL2P..", required=true )
 	@NonNull
@@ -35,17 +38,17 @@ public class FsePaymentRequest {
 
 	@ApiModelProperty(value="XRP private key from wallet that is sending the token.  Example ED419C91A68F5...", required=true)	
 	@NonNull
+	@ToString.Exclude
 	private String fromPrivateKey;
 
 	@ApiModelProperty(value="List of public XRP addresses that will each receive the tokens.  Example rnL2T..", required=true)
-	@NonNull
 	private List<String> toClassicAddresses;
 
 	@ApiModelProperty(value="Amount of tokens that will be distributed to each recipient address.  Example .589", required=true)
 	@NonNull
 	private String amount;
 
-	@ApiModelProperty(value="XRP destination tag if required.  NULLABLE Do not add attribute if null.  Example 12345")
+	@ApiModelProperty(value="XRP destination tag if required.  NULLABLE Do not add attribute if null.  Value must be a number.  Example 12345")
 	//nullable
 	private String destinationTag;
 
@@ -57,9 +60,28 @@ public class FsePaymentRequest {
 	@NonNull
 	private String currencyName;
 
-	@ApiModelProperty(value="I agree to the " + XrplServiceImpl.SERVICE_FEE + " XRP fee to use this service", required=true)
+	@ApiModelProperty(value="I agree to the service fee per recipients fee to use this service", required=true)
 	private boolean agreeFee;
 
-	@ApiModelProperty(value="If true, then this payment will also go to blacklisted addresses", required=true)
-	private boolean payBlacklistedAddresses;
+	@ApiModelProperty(value="OPTIONAL: The max XRP fee you are willing to pay per transaction", required=false)
+	private String maxXrpFeePerTransaction;
+	
+	@ApiModelProperty(value = "OPTIONAL: If true, then only recipients who have been verified with Global.ID will receive the airdrop")
+	private boolean globalIdVerified;
+
+	@ApiModelProperty(value = "OPTIONAL: If true, then the blacklist will be used to filter scam addresses")
+	private boolean useBlacklist;
+	
+	@ApiModelProperty(value = "OPTIONAL: Retry of other airdrop id")
+	private Long retryOfId;
+	
+	@ApiModelProperty(value = "FLAT or PROPORTIONAL.  Flat payments pay the exact amount to each recipient.  Proportional pays the amount * the recipients balance")
+	private PaymentType paymentType;
+	
+	@ApiModelProperty(value = "XRP address of the issuer of this currency if different from the sending currency.  Example rn2J..", required = true)
+	private String snapshotTrustlineIssuerClassicAddress;
+
+	@ApiModelProperty(value = "Currency used for the snapshot if different from the sending currency.  Example FSE", required = true)
+	private String snapshotCurrencyName;
+
 }

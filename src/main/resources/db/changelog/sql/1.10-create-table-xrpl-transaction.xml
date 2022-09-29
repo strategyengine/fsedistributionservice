@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+	<changeSet id="1.10" author="bknapp">
+
+		<createTable tableName="XRPL_TRANSACTION">
+			<column name="ID" type="int" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+			<column name="CREATE_DATE" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="TX_HASH" type="varchar(2000)" />
+
+			<column name="FAIL_REASON" type="varchar(1000)" />
+			<column name="RESPONSE_CODE" type="varchar(250)" />
+
+			<column name="DROP_RECIPIENT_ID" type="bigint" />
+
+		</createTable>
+	</changeSet>
+	
+
+</databaseChangeLog>

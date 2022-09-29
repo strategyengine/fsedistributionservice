@@ -1,5 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.io.Serializable;
+
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -19,7 +21,10 @@ import lombok.ToString;
 @AllArgsConstructor
 @Setter
 @ApiModel(value="POST parameters to schedule tokens dropped to all trustlines after a minimum number of trustlines is reached")
-public class FsePaymentTrustlinesMinTriggeredRequest {
+public class FsePaymentTrustlinesMinTriggeredRequest implements Serializable {
+
+
+	private static final long serialVersionUID = 5717102504727712570L;
 
 	@ApiModelProperty(value="Trustline payment request details", required=true)
 	@NonNull

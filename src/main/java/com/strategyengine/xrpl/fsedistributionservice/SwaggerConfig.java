@@ -14,7 +14,6 @@ import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.service.ApiInfo;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 /**
  * http://localhost:8080/swagger-ui.html
@@ -22,7 +21,6 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
  *
  */
 @Configuration
-@EnableSwagger2
 public class SwaggerConfig {
 
 	@Bean
@@ -38,7 +36,7 @@ public class SwaggerConfig {
 	}
 
 	private ApiInfo apiInfo() {
-		return new ApiInfoBuilder().title("XRPL Issued Token Airdrop API")
+		return new ApiInfoBuilder().title("XRPL Issued Token Airdrop API - BETA")
 				.description("API methods to help with issued token airdrops.  It is not recommended to use this service on a server you do not own.  "
 						+ "If you must, then use a temp XRP address for any operation that requires you to input a private key.  "
 						+ "Move just the required amounts to the temp address.")

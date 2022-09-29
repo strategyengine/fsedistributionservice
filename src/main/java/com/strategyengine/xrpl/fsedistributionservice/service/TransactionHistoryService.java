@@ -9,10 +9,12 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 
 public interface TransactionHistoryService {
 
-	List<FseTransaction> getTransactions(String classicAddress, Optional<Long> maxLedgerIndex, int limit);
+	List<FseTransaction> getTransactions(String classicAddress, Optional<Long> maxLedgerIndex, int limit, Optional<Date> oldest);
 
-	Set<String> getPreviouslyPaidAddresses(String classicAddress, String currency, String issuingAddress);
+	Set<String> getPreviouslyPaidAddresses(String classicAddress, String issuingAddress);
 
-	List<FseTransaction> getTransactionsBetweenDates(String classicAddress, String currency, Date startTime, Date stopTime);
+	List<FseTransaction> getTransactionsBetweenDates(String classicAddress, Date startTime, Date stopTime);
+
+	List<FseTransaction> getTransactionBurns(String classicAddress);
 	
 }

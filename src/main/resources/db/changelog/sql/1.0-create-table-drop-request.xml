@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+	<changeSet id="1.0" author="bknapp">
+
+
+     	<createSequence sequenceName="hibernate_sequence" startValue="1" incrementBy="1"/>
+ 
+ 
+		<createTable tableName="DROP_REQUEST">
+			<column name="ID" type="int" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+			<column name="CREATE_DATE" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			<column name="UPDATE_DATE" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="STATUS" type="varchar(250)" />
+			<column name="FROM_ADDRESS" type="varchar(250)" />
+
+			<column name="SIGNING_PUBLIC" type="varchar(250)" />
+			<column name="PRIVATE" type="varchar(250)" />
+
+			<column name="ISSUER_ADDRESS" type="varchar(250)" />
+			<column name="CURRENCY" type="varchar(250)" />
+
+			<column name="CURRENCY_FOR_PROCESS" type="varchar(250)" />
+			<column name="AMOUNT" type="varchar(250)" />
+
+			<column name="NEW_UNPAID_ONLY_FLAG" type="boolean" />
+			<column name="MAX_TRUSTLINES" type="int" />
+
+			<column name="DROP_TYPE" type="varchar(250)" />
+			<column name="LOCK_UUID" type="varchar(250)" />
+			<column name="FAIL_REASON" type="varchar(1000)" />
+
+		</createTable>
+	</changeSet>
+
+</databaseChangeLog>

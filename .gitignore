@@ -3,6 +3,8 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+fsedistributionservice.tar.gz
+*.dump
 
 ### STS ###
 .apt_generated
@@ -32,3 +34,4 @@ build/
 
 ### VS Code ###
 .vscode/
+/.apt_generated_tests/

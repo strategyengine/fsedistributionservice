@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+	<changeSet id="1.16" author="bknapp">
+
+		<addColumn tableName="DROP_RECIPIENT">
+			<column name="SNAPSHOT_BALANCE" type="varchar(250)" />
+		</addColumn>
+		<addColumn tableName="DROP_RECIPIENT">
+			<column name="PAY_AMOUNT" type="varchar(250)" />
+		</addColumn>
+
+		<addColumn tableName="DROP_REQUEST">
+			<column name="PAYMENT_TYPE" type="varchar(250)" />
+		</addColumn>
+
+
+	</changeSet>
+
+</databaseChangeLog>

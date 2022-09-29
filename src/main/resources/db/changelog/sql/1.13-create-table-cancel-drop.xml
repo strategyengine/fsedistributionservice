@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+	<changeSet id="1.13" author="bknapp">
+
+		<createTable tableName="CANCEL_DROP_REQUEST">
+			<column name="ID" type="int" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+			<column name="CREATE_DATE" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="DROP_REQUEST_ID" type="bigint" />
+
+		</createTable>
+	
+		<createIndex indexName="idx_canceldroprequest_dropreqid"
+			tableName="CANCEL_DROP_REQUEST" unique="false">
+			<column name="DROP_REQUEST_ID" />
+		</createIndex>
+		
+	</changeSet>
+	
+		
+</databaseChangeLog>
