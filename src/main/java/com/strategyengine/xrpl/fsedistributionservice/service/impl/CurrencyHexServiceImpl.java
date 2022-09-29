@@ -6,7 +6,7 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.springframework.stereotype.Service;
 
-import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
+import com.google.common.base.Strings;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
 
 import lombok.NonNull;
@@ -17,42 +17,49 @@ import lombok.extern.log4j.Log4j2;
 public class CurrencyHexServiceImpl implements CurrencyHexService {
 
 	protected static final Pattern HEX_REGEX = Pattern.compile("^[A-Z0-9]{40}$");
-
-	@Override
-	public boolean isAcceptedCurrency(FseTrustLine trustLine, String isoCurrency) {
-
-		String trustLineCurrency;
-		try {
-			if (isHex(trustLine.getCurrency())) {
-
-				trustLineCurrency = convertHexToCurrencyCode(trustLine.getCurrency());
-			}else {
-				
-				trustLineCurrency = trustLine.getCurrency();
-			}
-		} catch (Exception e) {
-			log.error("Could not convert currency hex for trustline " + trustLine, e);
-			return false;
-		}
-		return trustLineCurrency.equals(isoCurrency);
-	}
-
+	protected static final Pattern ISO_REGEX = Pattern.compile("^[a-zA-Z0-9]{3}$");
+	
 	private boolean isHex(String val) {
 
 		return HEX_REGEX.matcher(val).matches();
 	}
 
-	private String convertHexToCurrencyCode(String hex) throws DecoderException {
+	@Override
+	public boolean isAcceptedCurrency(@NonNull String currencyName) {
+		if (currencyName != null && currencyName.length() > 1) {
+			return true;
+		}
 
-		return new String(Hex.decodeHex(hex)).trim();
+		return false;
 	}
 
 	@Override
-	public boolean isAcceptedCurrency(@NonNull String currencyName) {
-		if(currencyName !=null && currencyName.length()>1) {
-			return true;
+	public String fixCurrencyCode(String val) {
+		if (isHex(val) || isIsoCode(val)) {
+
+			return val;
 		}
-		
-		return false;
+
+		return Strings.padEnd(new String(Hex.encodeHex(val.getBytes())), 40, '0').toUpperCase();
+	}
+
+
+	private boolean isIsoCode(String iso) {
+		return ISO_REGEX.matcher(iso).matches();
+	}
+
+	@Override
+	public String currencyString(String val) {
+		if(val==null) {
+			return null;
+		}
+		if (isHex(val)) {
+			try {
+				return new String(Hex.decodeHex(val.toCharArray()));
+			} catch (DecoderException e) {
+				log.error("Failed to decode currency hex for " + val, e);
+			}
+		}
+		return val;
 	}
 }

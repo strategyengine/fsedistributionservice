@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+	<changeSet id="1.22" author="bknapp">
+
+		<delete tableName="config">
+		</delete>
+
+		<insert tableName="config">
+			<column name="id" value="1" />
+			<column name="key" value="AIRDROP.ENABLED" />
+			<column name="value" value="TRUE" />
+		</insert>
+
+		<insert tableName="config">
+			<column name="id" value="2" />
+			<column name="key"
+				value="SERVICE_FEE_INTERVAL_VERIFIED" />
+			<column name="value" value="5000" />
+		</insert>
+
+		<insert tableName="config">
+			<column name="id" value="3" />
+			<column name="key"
+				value="DEFAULT_SERVICE_FEE_PER_INTERVAL_VERFIED" />
+			<column name="value" value=".1" />
+		</insert>
+
+		<insert tableName="config">
+			<column name="id" value="4" />
+			<column name="key" value="RETRY.HUNG.DROP.ENV" />
+			<column name="value" value="BEAST1" />
+		</insert>
+
+		<insert tableName="config">
+			<column name="id" value="5" />
+			<column name="key"
+				value="DEFAULT_SERVICE_FEE_PER_INTERVAL_UNVERFIED" />
+			<column name="value" value=".5" />
+		</insert>
+
+		<insert tableName="config">
+			<column name="id" value="6" />
+			<column name="key"
+				value="SERVICE_FEE_INTERVAL_UNVERIFIED" />
+			<column name="value" value="25000" />
+		</insert>
+
+		<!-- after this script runs you should go change this value in your db -->
+		<insert tableName="config">
+			<column name="id" value="7" />
+			<column name="key" value="SEC.SALTY.SAUCE" />
+			<column name="value" value="SeCR3TS4LTYS4UC3!" />
+
+		</insert>
+
+	</changeSet>
+
+</databaseChangeLog>

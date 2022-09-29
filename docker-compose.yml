@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=ardy
+      - POSTGRES_PASSWORD=ardy123!
+    ports:
+      - '5432:5432'
+    volumes: 
+      - db:/var/lib/postgresql/data
+  cache:
+    image: hazelcast/hazelcast
+    restart: always
+    ports:
+      - '5701:5701'    
+  api:
+    container_name: fsedistributionservice
+    build:
+      context: ./
+      target: production
+    image: fsedistributionservice:latest
+    depends_on:
+      - db
+    ports:
+      - 8080:8080
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ardy
+      DB_PASSWORD: ardy123!
+      DB_NAME: postgres
+    links:
+      - db
+      - cache
+    volumes:
+      - './:/src'
+volumes:
+  db:
+    driver: local

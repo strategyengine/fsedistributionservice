@@ -1,6 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.rest.trustlines;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -10,10 +11,10 @@ import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
 import org.xrpl.xrpl4j.wallet.Wallet;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.strategyengine.xrpl.fsedistributionservice.FseConstants;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseWallet;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
-import com.strategyengine.xrpl.fsedistributionservice.service.TrustlineTriggerDropService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 import io.swagger.annotations.Api;
@@ -34,16 +35,12 @@ public class WalletController {
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
 
-	@VisibleForTesting
-	@Autowired
-	protected TrustlineTriggerDropService trustlineTriggerDropService;
 
 	@VisibleForTesting
 	@Autowired
 	protected AirdropSummaryService airdropSummaryService;
 
 	
-
 	@ApiOperation(value = "Generates some XRP wallets")
 	@RequestMapping(value = "/api/walletgen", method = RequestMethod.GET)
 	public FseWallet generateWallet() {
@@ -55,11 +52,10 @@ public class WalletController {
 				.fromPrivateKey(w.privateKey().get()).fromSigningPublicKey(w.publicKey()).userSeed(seedVal).build();
 
 	}
-
 	@ApiOperation(value = "Generates some XRP wallets")
-	@RequestMapping(value = "/api/walletgenFromSeed", method = RequestMethod.POST)
+	@RequestMapping(value = "/api/walletgen/{seed}", method = RequestMethod.GET)
 	public FseWallet generateWallet(
-			@ApiParam(value = "Seed that is used to recover this wallet", required = true) @RequestBody String seed) {
+			@ApiParam(value = "Seed that is used to recover this wallet") @PathVariable("seed") String seed) {
 
 
 

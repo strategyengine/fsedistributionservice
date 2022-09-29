@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+	<changeSet id="1.2" author="bknapp">
+
+		<createIndex indexName="idx_scammer_address"
+			tableName="SCAMMER_ADDRESS" unique="true">
+			<column name="address" />
+		</createIndex>
+
+		<createIndex indexName="idx_droprequest_issuer"
+			tableName="DROP_REQUEST" unique="false">
+			<column name="ISSUER_ADDRESS" />
+		</createIndex>
+
+		<createIndex indexName="idx_droprecip_status"
+			tableName="DROP_RECIPIENT" unique="false">
+			<column name="STATUS" />
+		</createIndex>
+		
+		<createIndex indexName="idx_droprecip_request_id"
+			tableName="DROP_RECIPIENT" unique="false">
+			<column name="DROP_REQUEST_ID" />
+		</createIndex>
+
+
+	</changeSet>
+
+</databaseChangeLog>
+
+

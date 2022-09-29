@@ -1,5 +1,6 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -18,7 +19,9 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter
-public class FseAccount {
+public class FseAccount implements Serializable {
+
+	private static final long serialVersionUID = -3587142434709059955L;
 
 	private String classicAddress;
 	
@@ -27,4 +30,6 @@ public class FseAccount {
 	private List<FseTrustLine> trustLines;
 	
 	private String activationAddress;
+	
+	private Boolean blackholed;
 }

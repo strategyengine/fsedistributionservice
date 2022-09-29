@@ -56,7 +56,7 @@ public class AnalysisServiceImplTest {
 		
 		
 		Mockito.when(transactionHistoryService.getTransactions(classicAddress, Optional.empty(),
-				20000)).thenReturn(ImmutableList.of(FseTransaction.builder().transactionType("PAYMENT").toAddress(childAddress).build()));
+				20000, Optional.empty())).thenReturn(ImmutableList.of(FseTransaction.builder().transactionType("PAYMENT").toAddress(childAddress).build()));
 
 		Set<String> expected = Sets.newHashSet(childAddress);
 		Set<String> actual = sut.getPaidAddresses(classicAddress);

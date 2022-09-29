@@ -8,7 +8,6 @@ import org.mockito.MockitoAnnotations;
 import org.xrpl.xrpl4j.codec.binary.types.CurrencyType;
 
 import com.google.common.base.Strings;
-import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 
 public class CurrencyHexServiceImplTest {
 
@@ -23,33 +22,41 @@ public class CurrencyHexServiceImplTest {
 		MockitoAnnotations.openMocks(this);
 		sut = new CurrencyHexServiceImpl();
 	}
+	
+
 
 	@Test
-	public void testSkipConvertTrustLineCurrencyIso() {
-		
-		String balance = "1.25";
-		String classicAdd = "1234ADSF";
-		
-		FseTrustLine trustLine = FseTrustLine.builder().currency("FSE").balance(balance).classicAddress(classicAdd).build();
-		
-		boolean actual = sut.isAcceptedCurrency(trustLine, "FSE");
-		
-		Assertions.assertTrue(actual);
+	public void testOne() {
+
+		String actual = sut.fixCurrencyCode("KATANA");
+
+		Assertions.assertEquals("4B4154414E410000000000000000000000000000", actual);
+
+
+
 	}
-	
 	@Test
-	public void testConvertTrustLineCurrencyHex() {
-		
-		String balance = "1.25";
-		String classicAdd = "1234ADSF";
-		
-		FseTrustLine trustLine = FseTrustLine.builder().currency("4653450000000000000000000000000000000000").balance(balance).classicAddress(classicAdd).build();
-		
-		boolean actual = sut.isAcceptedCurrency(trustLine, "FSE");
-		
-		Assertions.assertTrue(actual);
-	}
+	public void fixThreeLetterCode() {
+
+		String actual = sut.fixCurrencyCode("xSD");
+
+		Assertions.assertEquals("xSD", actual);
+	}	
 	
+
+	@Test
+	public void fixCurrencyCode() {
+
+		String actual = sut.fixCurrencyCode("FGARY");
+
+		Assertions.assertEquals("4647415259000000000000000000000000000000", actual);
+
+		actual = sut.fixCurrencyCode("Fractal");
+
+		Assertions.assertEquals("4672616374616C00000000000000000000000000", actual);
+
+	}
+
 	@Test
 	public void testCreateCurrencyTypeHex() throws Exception {
 
