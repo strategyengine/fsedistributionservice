@@ -85,6 +85,32 @@ public class AirdropVerificationServiceImplTest {
 		Assertions.assertEquals(transactions, m.get(toAddress));
 
 	}
+	
+	@Test
+	public void testIsCrossSnapshotDropFalse() {
+		
+		
+		Assertions.assertFalse(sut.isCrossSnapshotDrop(PaymentRequestEnt.builder()
+				.currencyName("A").trustlineIssuerClassicAddress("r1")
+				.snapshotCurrencyName("A").snapshotTrustlineIssuerClassicAddress("r1").build()));
+	}
+	
+	@Test
+	public void testIsCrossSnapshotDropTrue() {
+		
+		Assertions.assertTrue(sut.isCrossSnapshotDrop(PaymentRequestEnt.builder()
+				.currencyName("A").trustlineIssuerClassicAddress("r1")
+				.snapshotCurrencyName("B").snapshotTrustlineIssuerClassicAddress("r2").build()));
+
+		Assertions.assertTrue(sut.isCrossSnapshotDrop(PaymentRequestEnt.builder()
+				.currencyName("A").trustlineIssuerClassicAddress("r1")
+				.snapshotCurrencyName("B").snapshotTrustlineIssuerClassicAddress("r1").build()));
+		
+		Assertions.assertTrue(sut.isCrossSnapshotDrop(PaymentRequestEnt.builder()
+				.currencyName("A").trustlineIssuerClassicAddress("r1")
+				.snapshotCurrencyName("A").snapshotTrustlineIssuerClassicAddress("r2").build()));
+				
+	}
 
 	@Test
 	public void testAmountsEqual() {
@@ -182,7 +208,8 @@ public class AirdropVerificationServiceImplTest {
 	private void valid(String paidBefore, String toPayAndBurn, String totalPaid, int size, DropType dropType) {
 		PaymentRequestEnt p = PaymentRequestEnt.builder().id(2000000l).fromClassicAddress("r")
 				.fromSigningPublicKey("1234").trustlineIssuerClassicAddress("1234").dropType(dropType)
-				.currencyName("te").amount("1").fromPrivateKey("234").feesPaid(paidBefore).build();
+				.currencyName("te").amount("1").fromPrivateKey("234").feesPaid(paidBefore)
+				.build();
 
 		BigDecimal amountToPay = new BigDecimal(toPayAndBurn).multiply(new BigDecimal("2"));
 		BigDecimal burnFee = amountToPay.multiply(new BigDecimal(".9")).stripTrailingZeros();
@@ -244,6 +271,15 @@ public class AirdropVerificationServiceImplTest {
 		Mockito.verifyNoInteractions(paymentService);
 
 		Mockito.verify(paymentRequestRepo, Mockito.never()).save(Mockito.any());
+	}
+	
+	@Test
+	public void testTotalFeesRequiredForSize() {
+		
+		BigDecimal val = sut.getTotalFeeRequiredForSize(657, DropType.SPECIFICADDRESSES, true);
+		
+		Assertions.assertEquals(new BigDecimal("2.00"),val);
+		
 	}
 
 }

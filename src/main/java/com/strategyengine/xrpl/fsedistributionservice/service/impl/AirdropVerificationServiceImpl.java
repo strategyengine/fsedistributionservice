@@ -376,15 +376,19 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 		BigDecimal totalFeesCollected = p.getFeesPaid() == null ? BigDecimal.ZERO
 				: new BigDecimal(p.getFeesPaid()).setScale(2, RoundingMode.DOWN);
 
+	
+		boolean isCrossCurrencySnapshotDrop = isCrossSnapshotDrop(p);
+				
 		BigDecimal totalFeeRequiredForSize = getTotalFeeRequiredForSize(totalVerifiedRecipients, p.getDropType(), 
-				!StringUtils.isEmpty(p.getSnapshotCurrencyName()) && (!p.getSnapshotCurrencyName().equals(p.getCurrencyName())
-						&& (!p.getSnapshotTrustlineIssuerClassicAddress().equals(p.getTrustlineIssuerClassicAddress()))));
+				isCrossCurrencySnapshotDrop);
 
 		BigDecimal remainingToCollect = totalFeeRequiredForSize.subtract(totalFeesCollected).setScale(2,
 				RoundingMode.DOWN);
 
-		log.info(String.format("dropId:%s totalVerifiedRecipients:%s totalFeesCollected:%s totalFeeRequiredForSize:%s remainingToCollect:%s",
-				p.getId(), totalVerifiedRecipients,totalFeesCollected,totalFeeRequiredForSize,remainingToCollect));
+		log.info(String.format("dropId:%s totalVerifiedRecipients:%s totalFeesCollected:%s totalFeeRequiredForSize:%s remainingToCollect:%s "
+				+ "currency:%s issuer:%s snapCurrency:%s snapIssuer:%s",
+				p.getId(), totalVerifiedRecipients,totalFeesCollected,totalFeeRequiredForSize,remainingToCollect,
+				p.getCurrencyName(), p.getTrustlineIssuerClassicAddress(), p.getSnapshotCurrencyName(), p.getSnapshotTrustlineIssuerClassicAddress()));
 				
 		
 		if (totalFeesCollected.stripTrailingZeros().equals(BigDecimal.ZERO)
@@ -433,12 +437,20 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 
 	}
 
+	protected boolean isCrossSnapshotDrop(PaymentRequestEnt p) {
+		return !StringUtils.isEmpty(p.getSnapshotCurrencyName()) 
+				&& (!p.getSnapshotCurrencyName().equals(p.getCurrencyName())
+				|| (!p.getSnapshotTrustlineIssuerClassicAddress().equals(p.getTrustlineIssuerClassicAddress())));
+		
+	}
+
+
 	private boolean isVerifiedDropType(DropType dropType) {
 		return DropType.GLOBALID == dropType ||DropType.GLOBALID_SPECIFICADDRESSES == dropType;
 	}
 
 
-	private BigDecimal getTotalFeeRequiredForSize(int size, DropType dropType, boolean sendingDifferentIssuer) {
+	protected BigDecimal getTotalFeeRequiredForSize(int size, DropType dropType, boolean sendingDifferentIssuer) {
 		
 		int serviceFeeInterval = isVerifiedDropType(dropType) ? configService.getInt(SERVICE_FEE_INTERVAL_VERIFIED) : configService.getInt(SERVICE_FEE_INTERVAL_UNVERIFIED);
 
@@ -453,6 +465,7 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 		if(sendingDifferentIssuer) {
 			//double fee if sending different issuer
 			serviceFee = serviceFee*2;
+			log.info("getTotalFeeRequiredForSide - sendingDifferentIssuer for drop - service Fee - " + serviceFee);	
 		}
 
 		return new BigDecimal(intervalCount * serviceFee)

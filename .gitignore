@@ -5,7 +5,7 @@ target/
 !**/src/test/**/target/
 fsedistributionservice.tar.gz
 *.dump
-
+deploy.sh
 ### STS ###
 .apt_generated
 .classpath
