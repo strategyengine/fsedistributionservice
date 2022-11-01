@@ -151,17 +151,9 @@ public class XrplServiceImpl implements XrplService {
 
 		try {
 		attempt++;
-		List<FseTrustLine> trustLines1 = getTrustLinesForCompare(classicAddress, currency, currencyForProcess, includes,
+		return  getTrustLinesForCompare(classicAddress, currency, currencyForProcess, includes,
 				sort);
 
-		List<FseTrustLine> trustLines2 = getTrustLinesForCompare(classicAddress, currency, currencyForProcess, includes,
-				sort);
-
-		if (attempt > 6 || (trustLines1.containsAll(trustLines2) && trustLines2.containsAll(trustLines1))) {
-			return trustLines1.size() > trustLines2.size() ? trustLines1 : trustLines2;
-		}
-		log.warn("Trustlines returned by XRPL did not match, rerunning with attempt " + attempt);
-		return getTrustLinesCompared(classicAddress, currency, currencyForProcess, includes, sort, attempt);
 		
 		}catch(Exception e) {
 			log.error("Error comparing trustlines " + classicAddress, e);
