@@ -212,6 +212,22 @@ public class AnalysisController {
 
 	}
 	
+	/**
+	 * {
+  "agreeFee": true,
+  "amount": "1",
+  "currencyName": "ASC",
+  "snapshotCurrencyName": "RPR",
+  "snapshotTrustlineIssuerClassicAddress": "r3qWgpz2ry3BhcRJ8JE6rxM8esrfhuKp4R",
+  "trustlineIssuerClassicAddress": "r3qWgpz2ry3BhcRJ8JE6rxM8esrfhuKp4R",
+  "fromClassicAddress": "string",
+  "fromPrivateKey": "string",
+  "fromSigningPublicKey": "string",
+  "paymentType": "FLAT"
+}
+	 * @param paymentRequest
+	 * @return
+	 */
 	@ApiOperation(value = "Find the trustlines that would be paid by a cross currency drop")
 	@RequestMapping(value = "/analysis/crosscurrency/trustlines", method = RequestMethod.POST)
 	public List<FseTrustLine> fetchTrustlinesForCrossCurrencyDrop(
