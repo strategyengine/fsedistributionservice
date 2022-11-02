@@ -728,6 +728,37 @@ public class XrplServiceImpl implements XrplService {
 		return eligibleTrustLines;
 	}
 
+	@Override
+	public List<FseTrustLine> fetchAllTrustlines(FsePaymentTrustlinesRequest paymentRequestPre) {
+		
+		String currencyNameForProcess = currencyHexService.fixCurrencyCode(paymentRequestPre.getCurrencyName().trim());
+		FsePaymentTrustlinesRequest p = paymentRequestPre.toBuilder().currencyName(currencyNameForProcess).build();
+
+		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
+				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
+				.maxBalance(
+						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
+								: null)
+				.paymentType(paymentRequestPre.getPaymentType() == null ? PaymentType.FLAT
+						: paymentRequestPre.getPaymentType())
+				.populateEnvironment(environment).amount(p.getAmount().trim()).createDate(now())
+				.currencyName(paymentRequestPre.getCurrencyName().trim())
+				.currencyNameForProcess(p.getCurrencyName().trim())
+				.maxXrpFeePerTransaction(paymentRequestPre.getMaxXrpFeePerTransaction() == null
+						? XrplClientServiceImpl.MAX_XRP_FEE_PER_TRANSACTION
+						: paymentRequestPre.getMaxXrpFeePerTransaction())
+				.retryOfId(paymentRequestPre.getRetryOfId())
+				.dropType(paymentRequestPre.isGlobalIdVerified() ? DropType.GLOBALID : DropType.TRUSTLINE)
+				.fromClassicAddress(p.getFromClassicAddress().trim()).fromPrivateKey(p.getFromPrivateKey().trim())
+				.fromSigningPublicKey(p.getFromSigningPublicKey().trim()).maximumTrustlines(p.getMaximumTrustlines())
+				.newTrustlinesOnly(p.isNewTrustlinesOnly()).status(DropRequestStatus.POPULATING_ADDRESSES)
+				.useBlacklist(p.isUseBlacklist()).snapshotCurrencyName(p.getSnapshotCurrencyName())
+				.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
+				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress().trim()).updateDate(now()).build());
+
+		
+		return fetchAllTrustlines(paymentRequestEnt);
+	}
 	private List<FseTrustLine> fetchAllTrustlines(PaymentRequestEnt paymentRequestEnt) {
 		String snapshotCurrencyName = StringUtils.hasLength(paymentRequestEnt.getSnapshotCurrencyName())
 				? paymentRequestEnt.getSnapshotCurrencyName()
@@ -782,7 +813,7 @@ public class XrplServiceImpl implements XrplService {
 	private boolean isCrossCurrencyDrop(PaymentRequestEnt paymentRequestEnt) {
 		return StringUtils.hasLength(paymentRequestEnt.getSnapshotCurrencyName())
 				&& (!paymentRequestEnt.getSnapshotCurrencyName().equals(paymentRequestEnt.getCurrencyName())
-						&& (!paymentRequestEnt.getSnapshotTrustlineIssuerClassicAddress()
+						|| (!paymentRequestEnt.getSnapshotTrustlineIssuerClassicAddress()
 								.equals(paymentRequestEnt.getTrustlineIssuerClassicAddress())));
 	}
 

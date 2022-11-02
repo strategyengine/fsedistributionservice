@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.strategyengine.xrpl.fsedistributionservice.model.DropRecipientTransactions;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
+import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseSort;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
@@ -209,6 +211,19 @@ public class AnalysisController {
 		return analysisService.getVerifiedForIssuer(issueAddress, currency);
 
 	}
+	
+	@ApiOperation(value = "Find the trustlines that would be paid by a cross currency drop")
+	@RequestMapping(value = "/analysis/crosscurrency/trustlines", method = RequestMethod.POST)
+	public List<FseTrustLine> fetchTrustlinesForCrossCurrencyDrop(
+			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesRequest paymentRequest) {
+
+		log.info("/analysis/crosscurrency/trustlines " + paymentRequest);
+		return xrplService.fetchAllTrustlines(paymentRequest);
+
+	}
+	
+	
+	
 
 
 }
