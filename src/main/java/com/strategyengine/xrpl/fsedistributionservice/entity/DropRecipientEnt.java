@@ -71,7 +71,9 @@ public class DropRecipientEnt {
 	
 	@Column(name = "PAY_AMOUNT")
 	private String payAmount;
-	
+
+	@Column(name = "OWNED_NFT_ID")
+	private String ownedNftId;
 	
 	
 }

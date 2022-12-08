@@ -50,6 +50,7 @@ import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryServ
 import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ConfigService;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
+import com.strategyengine.xrpl.fsedistributionservice.service.NftService;
 import com.strategyengine.xrpl.fsedistributionservice.service.PaymentService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
@@ -108,6 +109,9 @@ public class XrplServiceImpl implements XrplService {
 	protected CancelDropRequestRepo cancelDropRequestRepo;
 
 	@Autowired
+	protected NftService nftService;
+
+	@Autowired
 	protected ConfigService configService;
 
 	private String environment = System.getenv("ENV");
@@ -150,14 +154,12 @@ public class XrplServiceImpl implements XrplService {
 			Optional<String> currencyForProcess, boolean includes, FseSort sort, int attempt) {
 
 		try {
-		attempt++;
-		return  getTrustLinesForCompare(classicAddress, currency, currencyForProcess, includes,
-				sort);
+			attempt++;
+			return getTrustLinesForCompare(classicAddress, currency, currencyForProcess, includes, sort);
 
-		
-		}catch(Exception e) {
+		} catch (Exception e) {
 			log.error("Error comparing trustlines " + classicAddress, e);
-			if(attempt < 6) {
+			if (attempt < 6) {
 				return getTrustLinesCompared(classicAddress, currency, currencyForProcess, includes, sort, attempt);
 			}
 			return null;
@@ -297,6 +299,7 @@ public class XrplServiceImpl implements XrplService {
 						: paymentRequest.getMaxXrpFeePerTransaction())
 				.retryOfId(paymentRequest.getRetryOfId())
 				.trustlineIssuerClassicAddress(paymentRequest.getTrustlineIssuerClassicAddress().trim())
+				.nftIssuerAddress(paymentRequest.getNftIssuingAddress()).nftTaxon(paymentRequest.getNftTaxon())
 				.updateDate(now()).build());
 		if (blacklistService.getBlackListedCurrencies().contains(paymentRequest.getCurrencyName())) {
 			rejectDrop(
@@ -310,12 +313,32 @@ public class XrplServiceImpl implements XrplService {
 			rejectDrop(e, paymentRequestEnt);
 		}
 
-		Set<DropRecipientEnt> recipients = paymentRequest.getToClassicAddresses().stream()
-				.map(t -> DropRecipientEnt.builder().status(DropRecipientStatus.QUEUED).retryAttempt(0)
-						.payAmount(paymentRequestEnt.getAmount()) // always a flat amount for specific addresses
-						.createDate(now()).updateDate(now()).dropRequestId(paymentRequestEnt.getId()).address(t.trim())
-						.build())
-				.collect(Collectors.toSet());
+		Set<DropRecipientEnt> recipients = null;
+		// populate recipients from specific list or from NFT lookup
+		if (paymentRequest.getToClassicAddresses() == null && paymentRequest.getNftIssuingAddress() != null) {
+			try {
+				recipients = nftService.getNftOwners(paymentRequest).stream()
+						.filter(n -> !n.getOwner().equals(n.getIssuer()))// don't add a recipient if the issuer owns the
+																			// NFT
+						.map(t -> DropRecipientEnt.builder().status(DropRecipientStatus.QUEUED).retryAttempt(0)
+								.payAmount(paymentRequestEnt.getAmount()).createDate(now()).updateDate(now())
+								.dropRequestId(paymentRequestEnt.getId()).address(t.getOwner())
+								.ownedNftId(t.getNfTokenID()).build())
+						.collect(Collectors.toSet());
+			} catch (Exception e) {
+				rejectDrop(
+						"Failed to populate NFT owners.  You can retry this if the input NFT issuer address is correct: "
+								+ paymentRequestEnt.getNftIssuerAddress(),
+						paymentRequestEnt);
+			}
+		} else {
+
+			recipients = paymentRequest.getToClassicAddresses().stream()
+					.map(t -> DropRecipientEnt.builder().status(DropRecipientStatus.QUEUED).retryAttempt(0)
+							.payAmount(paymentRequestEnt.getAmount()).createDate(now()).updateDate(now())
+							.dropRequestId(paymentRequestEnt.getId()).address(t.trim()).build())
+					.collect(Collectors.toSet());
+		}
 
 		recipients = globalIdFilterSpecificAdds(recipients, paymentRequestPre);
 
@@ -347,13 +370,6 @@ public class XrplServiceImpl implements XrplService {
 			rejectDrop(message, paymentRequestEnt);
 		}
 
-		// Optional<FseTrustLine> fromAddressTrustLine =
-		// fromAccount.getTrustLines().stream()
-		// .filter(t ->
-		// paymentRequestEnt.getFromClassicAddress().equals(t.getClassicAddress())
-		// && paymentRequestEnt.getCurrencyName().equals(t.getCurrency()))
-		// .findFirst();
-
 		try {
 			validationService.validateFseBalance(Double.parseDouble(fromAddressTrustLineForFSE.get().getBalance()),
 					recipients.size(), paymentRequestEnt.getDropType(), false);
@@ -366,7 +382,9 @@ public class XrplServiceImpl implements XrplService {
 
 		List<DropRecipientEnt> savedRecipients = dropRecipientRepo.saveAll(removeDuplicates(recipients));
 
-		logRecipientCountDiff(paymentRequestPre, recipients, savedRecipients, paymentRequestEnt.getId());
+		if(paymentRequestPre.getToClassicAddresses()!=null && !paymentRequestPre.getToClassicAddresses().isEmpty() && paymentRequestPre.getNftIssuingAddress()==null) {
+			logRecipientCountDiff(paymentRequestPre, recipients, savedRecipients, paymentRequestEnt.getId());
+		}
 
 		if (cancelDropRequestRepo
 				.exists(Example.of(CancelDropRequestEnt.builder().dropRequestId(paymentRequestEnt.getId()).build()))) {
@@ -447,13 +465,14 @@ public class XrplServiceImpl implements XrplService {
 		String currencyNameCorrected = currencyHexService.fixCurrencyCode(currencyNameForProportion);
 		List<FseTrustLine> trustLinesMatchedForIssuer = trustlines.stream()
 				.filter(t -> t.getClassicAddress().equals(recip.getAddress())).collect(Collectors.toList());
-		
+
 		Optional<FseTrustLine> trustLineOp = Optional.empty();
-		if(!trustLinesMatchedForIssuer.isEmpty()) {
-			if(trustLinesMatchedForIssuer.size()==1) {
+		if (!trustLinesMatchedForIssuer.isEmpty()) {
+			if (trustLinesMatchedForIssuer.size() == 1) {
 				trustLineOp = Optional.of(trustLinesMatchedForIssuer.get(0));
-			}else {
-				trustLineOp = trustLinesMatchedForIssuer.stream().filter(t -> t.getCurrency().equals(currencyNameCorrected)).findAny();
+			} else {
+				trustLineOp = trustLinesMatchedForIssuer.stream()
+						.filter(t -> t.getCurrency().equals(currencyNameCorrected)).findAny();
 			}
 		}
 		// TODO validate these trustline addresses are recipient addresses
@@ -730,7 +749,7 @@ public class XrplServiceImpl implements XrplService {
 
 	@Override
 	public List<FseTrustLine> fetchAllTrustlines(FsePaymentTrustlinesRequest paymentRequestPre) {
-		
+
 		String currencyNameForProcess = currencyHexService.fixCurrencyCode(paymentRequestPre.getCurrencyName().trim());
 		FsePaymentTrustlinesRequest p = paymentRequestPre.toBuilder().currencyName(currencyNameForProcess).build();
 
@@ -756,9 +775,9 @@ public class XrplServiceImpl implements XrplService {
 				.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress().trim()).updateDate(now()).build());
 
-		
 		return fetchAllTrustlines(paymentRequestEnt);
 	}
+
 	private List<FseTrustLine> fetchAllTrustlines(PaymentRequestEnt paymentRequestEnt) {
 		String snapshotCurrencyName = StringUtils.hasLength(paymentRequestEnt.getSnapshotCurrencyName())
 				? paymentRequestEnt.getSnapshotCurrencyName()

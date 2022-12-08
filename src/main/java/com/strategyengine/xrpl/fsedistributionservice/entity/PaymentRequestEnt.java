@@ -126,5 +126,11 @@ public class PaymentRequestEnt {
 
 	@Column(name = "RETRY_OF_ID")
 	private Long retryOfId;
+
+	@Column(name = "NFT_ISSUER_ADDRESS")
+	private String nftIssuerAddress;
+
 	
+	@Column(name = "NFT_TAXON")
+	private Long nftTaxon;
 }

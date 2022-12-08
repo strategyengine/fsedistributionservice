@@ -97,6 +97,13 @@ public class FseDistributionServiceConfig {
 	public RestTemplate xrpScanRestTemplate() {
 		return new RestTemplate(getClientHttpRequestFactory());
 	}
+	
+	@Bean(name = "xrplNftRestTemplate")
+	public RestTemplate xrplNftRestTemplate() {
+		return new RestTemplate(getClientHttpRequestFactory());
+	}
+	
+	
 
 	private ClientHttpRequestFactory getClientHttpRequestFactory() {
 		int timeout = 60000;

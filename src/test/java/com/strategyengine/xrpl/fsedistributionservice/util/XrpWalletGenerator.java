@@ -1,5 +1,8 @@
 package com.strategyengine.xrpl.fsedistributionservice.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xrpl.xrpl4j.crypto.PrivateKey;
@@ -19,22 +22,50 @@ import org.xrpl.xrpl4j.wallet.WalletFactory;
  *
  */
 public class XrpWalletGenerator {
-
 	@Test
 	public void vanity() {
 
 		Wallet wallet = null;
 		String seed = null;
 
-		for (int i = 0; i < 100000000; i++) {
+		for (int i = 0; i < 100; i++) {
 			seed = DefaultKeyPairService.getInstance().generateSeed();
 			wallet = new XrpWalletGenerator().generateWallet(seed);
 			String add = wallet.classicAddress().value();
 	
-			if (add.toUpperCase().endsWith("Y")||add.toUpperCase().endsWith("TE5T")) {
-				break;
+			if(add.toUpperCase().startsWith("REAPER")) {
+				final Address classicAddress = wallet.classicAddress();
+
+				final XAddress xAddress = wallet.xAddress();
+				final String privateKeyEncoded = wallet.privateKey().get();
+				PrivateKey privateKeyFrom16Encoded = PrivateKey.fromBase16EncodedPrivateKey(wallet.privateKey().get());
+
+				String pkeyFromUnsignedByteArray = unsignedByteArrayToString(privateKeyFrom16Encoded.value().toByteArray());
+				
+				System.out.print("Almost made it! " + wallet.classicAddress().value() +  " " +  wallet);
+				System.out.println("privateKey Base58Encoded: " + privateKeyFrom16Encoded.base58Encoded());
+				System.out.println("Seed to regenerate: " + seed);
+			
+			}
+			if (add.startsWith("reaper")||add.endsWith("CASINO")||add.endsWith("SCHMECKLES")||add.endsWith("STRATEGY")
+					||add.startsWith("rEAPER")||add.endsWith("XPUNK")||add.endsWith("CORE")
+					||add.startsWith("3DAPES")||add.endsWith("XOGE")||add.endsWith("XTREME")||add.endsWith("XTOADZ")
+					||add.startsWith("TRSRY")||add.endsWith("JUNK")||add.endsWith("HOG")||add.endsWith("XRDOGE")) {
+				final Address classicAddress = wallet.classicAddress();
+
+				final XAddress xAddress = wallet.xAddress();
+				final String privateKeyEncoded = wallet.privateKey().get();
+				PrivateKey privateKeyFrom16Encoded = PrivateKey.fromBase16EncodedPrivateKey(wallet.privateKey().get());
+
+				String pkeyFromUnsignedByteArray = unsignedByteArrayToString(privateKeyFrom16Encoded.value().toByteArray());
+				
+				System.out.print("Almost made it! " + wallet.classicAddress().value() +  " " +  wallet);
+				System.out.println("privateKey Base58Encoded: " + privateKeyFrom16Encoded.base58Encoded());
+				System.out.println("Seed to regenerate: " + seed);
 			}
 		}
+	
+		
 		// Get the Classic and X-Addresses from testWallet
 		final Address classicAddress = wallet.classicAddress();
 

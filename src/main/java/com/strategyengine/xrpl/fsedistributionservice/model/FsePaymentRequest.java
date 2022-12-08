@@ -84,4 +84,9 @@ public class FsePaymentRequest implements Serializable {
 	@ApiModelProperty(value = "Currency used for the snapshot if different from the sending currency.  Example FSE", required = true)
 	private String snapshotCurrencyName;
 
+	@ApiModelProperty(value = "NFT issuing address used to fetch NFT owners", required = false)
+	private String nftIssuingAddress;
+	
+	@ApiModelProperty(value = "NFT taxon used to filter NFT owners by the taxon", required = false)
+	private Long nftTaxon;
 }

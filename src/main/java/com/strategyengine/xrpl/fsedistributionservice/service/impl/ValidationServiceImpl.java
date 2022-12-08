@@ -218,8 +218,10 @@ public class ValidationServiceImpl implements ValidationService {
 					"Snapshot Issuer Address");
 		}
 
-		payment.getToClassicAddresses().stream().forEach(a -> validateClassicAddress(a));
-
+		if(payment.getToClassicAddresses()!=null) {
+			//coult be null if an NFT issuer was entered
+			payment.getToClassicAddresses().stream().forEach(a -> validateClassicAddress(a));
+		}
 		validateXAddress(payment.getFromPrivateKey());
 		validateXAddress(payment.getFromSigningPublicKey());
 
@@ -232,6 +234,23 @@ public class ValidationServiceImpl implements ValidationService {
 		validateFromAddressMatchesKeys(payment.getFromClassicAddress(), payment.getFromPrivateKey(),
 				payment.getFromSigningPublicKey());
 
+		if (!StringUtils.isEmpty(payment.getNftIssuingAddress())) {
+			validateClassicAddressAccountLookup(payment.getNftIssuingAddress(),
+					"NFT Issuer Address");
+		}
+
+		validateToClassicAddressOrNftIssuerPopulated(payment.getToClassicAddresses(), payment.getNftIssuingAddress());
+	
+	}
+
+	private void validateToClassicAddressOrNftIssuerPopulated(List<String> toClassicAddresses,
+			String nftIssuingAddress) {
+		if(toClassicAddresses == null || toClassicAddresses.isEmpty()) {
+			if(nftIssuingAddress == null) {
+				throw new BadRequestException("Either specific addresses or and NFT issuing address must be populated");
+			}
+		}
+		
 	}
 
 	private void validateDecimal(String val, String field) {

@@ -55,7 +55,6 @@ public class TrustlinePaymentController {
 	@VisibleForTesting
 	@Autowired
 	protected RetryFailedPaymentsService retryFailedPaymentsService;
-
 	
 	@ApiOperation(value = "Distributes tokens to a set of recipient addresses")
 	@RequestMapping(value = "/api/payment", method = RequestMethod.POST)
