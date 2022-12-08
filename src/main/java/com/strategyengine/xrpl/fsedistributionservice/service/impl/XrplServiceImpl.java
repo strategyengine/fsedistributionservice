@@ -26,6 +26,7 @@ import org.xrpl.xrpl4j.model.client.accounts.TrustLine;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.hazelcast.internal.util.StringUtil;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.GlobalIdClient;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientServiceImpl;
@@ -174,6 +175,9 @@ public class XrplServiceImpl implements XrplService {
 			validationService.validateClassicAddress(classicAddress);
 			AccountLinesResult trustLines = getTrustLinesWithRetry(classicAddress, 0, null);
 
+			if(trustLines == null) {
+				return null;
+			}
 			List<FseTrustLine> fseTrustLines = trustLines.lines().stream()
 					.filter(t -> acceptByCurrency(t, currency, currencyForProcess, includes))
 					.map(t -> FseTrustLine.builder().classicAddress(t.account().value()).currency(t.currency())
@@ -837,10 +841,14 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	private Set<DropRecipientEnt> removeDuplicates(Set<DropRecipientEnt> recipients) {
-
+		
 		Set<DropRecipientEnt> recipientsToSave = new HashSet<>();
 		Set<String> foundRecipients = new HashSet<>();
-		for (DropRecipientEnt recip : recipients) {
+		for (DropRecipientEnt recip : recipients) {	
+			if(!StringUtil.isNullOrEmpty(recip.getOwnedNftId())){
+				//NFT owners could receive multiple payments
+				return recipients;
+			}
 			if (!foundRecipients.contains(recip.getAddress())) {
 				recipientsToSave.add(recip);
 				foundRecipients.add(recip.getAddress());
