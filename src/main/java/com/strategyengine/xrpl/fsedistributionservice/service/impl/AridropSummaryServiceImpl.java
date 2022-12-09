@@ -68,7 +68,9 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 				.minBalance(p.getMinBalance()).maxBalance(p.getMaxBalance())
 				.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 				.snapshotCurrencyName(p.getSnapshotCurrencyName())
-				.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).updateDate(p.getUpdateDate()).build();
+				.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).updateDate(p.getUpdateDate())
+				.nftIssuingAddress(p.getNftIssuerAddress())
+				.nftTaxon(String.valueOf(p.getNftTaxon())).build();
 	}
 
 	@Override
@@ -92,6 +94,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 				.map(r -> FsePaymentResult.builder().id(r.getId()).status(r.getStatus()).classicAddress(r.getAddress())
 						.reason(r.getFailReason()).responseCode(r.getCode())
 						.paymentAmount(r.getPayAmount()).snapshotBalance(r.getSnapshotBalance())
+						.nftOwned(r.getOwnedNftId())
 						.build())
 
 				.collect(Collectors.toList()));

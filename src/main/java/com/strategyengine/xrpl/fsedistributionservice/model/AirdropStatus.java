@@ -76,4 +76,8 @@ public class AirdropStatus implements Serializable {
 	
 	private String snapshotCurrencyName;
 	
+	private String nftIssuingAddress;
+	
+	private String nftTaxon;
+	
 }

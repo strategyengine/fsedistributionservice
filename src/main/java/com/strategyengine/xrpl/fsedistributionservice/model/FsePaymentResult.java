@@ -32,6 +32,6 @@ public class FsePaymentResult implements Serializable {
 	private DropRecipientStatus status;
 	private String paymentAmount;
 	private String snapshotBalance;
-	private PaymentType paymentType;
+	private String nftOwned;
 	
 }
