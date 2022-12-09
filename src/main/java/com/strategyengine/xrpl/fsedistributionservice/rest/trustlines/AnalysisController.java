@@ -130,7 +130,10 @@ public class AnalysisController {
 			@ApiParam(value = "OPTIONAL - true will only return results with the currency parameter, false will return all results not having the currency param", required = false) @RequestParam(value = "includeFilter", required = false) Boolean includeFilter,
 		    @ApiParam(value = "OPTIONAL - true will sort results by poor to rich, false will sort by newest added to oldest", required = false) @RequestParam(value = "sortByRich", required = false) Boolean sortByRich) {
 
-			String processCurrency = currencyHexService.fixCurrencyCode(filterCurrency);
+		String processCurrency = null;
+		if(filterCurrency!=null) {
+			 processCurrency = currencyHexService.fixCurrencyCode(filterCurrency);
+		}
 		return xrplService.getTrustLines(classicAddress, Optional.ofNullable(processCurrency), Optional.ofNullable(filterCurrency),
 				includeFilter == null ? true : includeFilter, 
 				sortByRich == null ? FseSort.OLD: FseSort.RICH);
