@@ -33,7 +33,9 @@
     <include file="sql/1.21-alter-table-burn_transaction_add_ledgerindex.xml" relativeToChangelogFile="true"/>    
     <include file="sql/1.22-insertconfigs.xml" relativeToChangelogFile="true"/>     
     <include file="sql/1.23-alter-table-drop-recip_add_nft.xml" relativeToChangelogFile="true"/>     
+    <include file="sql/1.24-alter-table-drop-req_starttime.xml" relativeToChangelogFile="true"/>     
     
+       
        
    
 </databaseChangeLog> 

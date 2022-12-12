@@ -318,6 +318,11 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 		PaymentRequestEnt paymentRequestEnt = null;
 		for (PaymentRequestEnt p : paymentRequests) {
 
+			if(p.getStartTime()!=null && p.getStartTime().after(new Date())) {
+				//not scheduled to start yet
+				continue;
+			}
+			
 			if (paymentRequestUpdatedTooRecently(p)) {
 				continue;
 			}

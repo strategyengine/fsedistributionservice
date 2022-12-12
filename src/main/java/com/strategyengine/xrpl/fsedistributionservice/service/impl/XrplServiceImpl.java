@@ -290,6 +290,7 @@ public class XrplServiceImpl implements XrplService {
 				.currencyName(paymentRequestPre.getCurrencyName().trim()).currencyNameForProcess(currency)
 				.dropType(paymentRequest.isGlobalIdVerified() ? DropType.GLOBALID_SPECIFICADDRESSES
 						: DropType.SPECIFICADDRESSES)
+				.startTime(paymentRequestPre.getStartTime()!=null ? paymentRequestPre.getStartTime()  : new Date())
 				.fromClassicAddress(paymentRequest.getFromClassicAddress().trim())
 				.paymentType(paymentRequest.getPaymentType())
 				.snapshotCurrencyName(paymentRequest.getSnapshotCurrencyName())
@@ -561,6 +562,7 @@ public class XrplServiceImpl implements XrplService {
 
 		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
 				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
+				.startTime(paymentRequestPre.getStartTime()!=null ? paymentRequestPre.getStartTime() : new Date())
 				.maxBalance(
 						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
 								: null)
@@ -762,6 +764,7 @@ public class XrplServiceImpl implements XrplService {
 				.maxBalance(
 						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
 								: null)
+				.startTime(paymentRequestPre.getStartTime()!=null? paymentRequestPre.getStartTime() : new Date())
 				.paymentType(paymentRequestPre.getPaymentType() == null ? PaymentType.FLAT
 						: paymentRequestPre.getPaymentType())
 				.populateEnvironment(environment).amount(p.getAmount().trim()).createDate(now())

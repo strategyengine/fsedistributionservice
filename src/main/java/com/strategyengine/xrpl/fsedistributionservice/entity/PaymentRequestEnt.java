@@ -55,6 +55,9 @@ public class PaymentRequestEnt {
 	@Column(name = "UPDATE_DATE")
 	private Date updateDate;
 	
+	@Column(name = "START_TIME")
+	private Date startTime;
+	
 	@Enumerated(EnumType.STRING)
 	@Column(name = "STATUS")
 	private DropRequestStatus status;

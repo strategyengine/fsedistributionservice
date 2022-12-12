@@ -1,6 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
 import java.io.Serializable;
+import java.util.Date;
 
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
@@ -88,5 +89,8 @@ public class FsePaymentTrustlinesRequest implements Serializable {
 
 	@ApiModelProperty(value = "Currency used for the snapshot if different from the sending currency.  Example FSE", required = true)
 	private String snapshotCurrencyName;
+
+	@ApiModelProperty(value = "The point after which this airdrop can begin", required = false)
+	private Date startTime;
 
 }

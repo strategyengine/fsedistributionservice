@@ -1,6 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice.model;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
@@ -47,6 +48,9 @@ public class FsePaymentRequest implements Serializable {
 	@ApiModelProperty(value="Amount of tokens that will be distributed to each recipient address.  Example .589", required=true)
 	@NonNull
 	private String amount;
+	
+	@ApiModelProperty(value = "The point after which this airdrop can begin", required = false)
+	private Date startTime;
 
 	@ApiModelProperty(value="XRP destination tag if required.  NULLABLE Do not add attribute if null.  Value must be a number.  Example 12345")
 	//nullable

@@ -70,6 +70,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 				.snapshotCurrencyName(p.getSnapshotCurrencyName())
 				.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).updateDate(p.getUpdateDate())
 				.nftIssuingAddress(p.getNftIssuerAddress())
+				.startTime(p.getStartTime())
 				.nftTaxon(String.valueOf(p.getNftTaxon())).build();
 	}
 
