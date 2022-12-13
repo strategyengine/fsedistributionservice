@@ -42,7 +42,7 @@ public class FseDistributionServiceConfig {
 
 	@Value("${fsedistributionservice.email.password}")
 	private String emailPassword;
-	
+
 	@Value("${fsedistributionservice.email.address}")
 	private String emailAddress;
 	

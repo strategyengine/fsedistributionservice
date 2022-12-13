@@ -51,7 +51,7 @@ public class DropScheduleEnt {
 	private Date createDate;
 
 	@Column(name = "LOCK_UUID")
-	private Date lockUuid;
+	private String lockUuid;
 
 	//date that the final schedule ran
 	@Column(name = "STATUS")

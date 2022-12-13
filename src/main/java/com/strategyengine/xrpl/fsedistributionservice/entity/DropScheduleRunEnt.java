@@ -3,21 +3,12 @@ package com.strategyengine.xrpl.fsedistributionservice.entity;
 import java.util.Date;
 
 import javax.persistence.Column;
-import javax.persistence.Convert;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-
-import com.strategyengine.xrpl.fsedistributionservice.entity.convert.KeyConverter;
-import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
-import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
-import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropType;
-import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
