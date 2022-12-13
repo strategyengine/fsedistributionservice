@@ -1,183 +1,176 @@
 package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
-import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.strategyengine.xrpl.fsedistributionservice.entity.CancelDropRequestEnt;
-import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
-import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
-import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
-import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
-import com.strategyengine.xrpl.fsedistributionservice.repo.CancelDropRequestRepo;
-import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropScheduleStatus;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
-import com.strategyengine.xrpl.fsedistributionservice.service.AirDropScheduler;
-import com.strategyengine.xrpl.fsedistributionservice.service.AirdropVerificationService;
-import com.strategyengine.xrpl.fsedistributionservice.service.ConfigService;
-import com.strategyengine.xrpl.fsedistributionservice.service.PaymentService;
-import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
 
 import lombok.extern.log4j.Log4j2;
 
 @Service
 @Log4j2
-public class AirDropSchedulerImpl implements AirDropScheduler {
+public class AirDropSchedulerImpl {
 
 	@VisibleForTesting
 	@Autowired
-	protected DropRecipientRepo dropRecipientRepo;
+	protected DropScheduleRepo dropScheduleRepo;
+
+	@VisibleForTesting
+	@Autowired
+	protected DropScheduleRunRepo dropScheduleRunRepo;
 
 	@VisibleForTesting
 	@Autowired
 	protected PaymentRequestRepo paymentRequestRepo;
-
-	@VisibleForTesting
-	@Autowired
-	protected CancelDropRequestRepo cancelDropRequestRepo;
-
-	@VisibleForTesting
-	@Autowired
-	protected PaymentService paymentService;
-
-	@VisibleForTesting
-	@Autowired
-	protected ConfigService configService;
-
-	@VisibleForTesting
-	@Autowired
-	protected AirdropVerificationService airdropVerificationService;
-
-	@VisibleForTesting
-	@Autowired
-	protected TransactionHistoryService transactionHistoryService;
-
-	private String environment = System.getenv("ENV");
 	
-	public static String ADMIN_LOCK_UUID = "RUN_ADMIN";
+	// runs every 6 minutes
+	@Scheduled(fixedDelay = 360000)
+	public void checkScheduledDrops() {
 
-	// DO NOT MARK THIS METHOD TRANSACTIONAL we need other processes to see the
-	// lock_uuid
-	// fixedDelay millis - check every minute for a drop
-	@Scheduled(fixedDelay = 60000)
-	public void runAirDrop() {
+		String uuid = UUID.randomUUID().toString();
 
-		Optional<PaymentRequestEnt> adminPaymentRequestOpt = Optional.empty();
-		if ("BEAST1".equals(environment) || "local".equals(environment) || !configService.isAirdropEnabled()) {
-			if("local".equals(environment)) {
-				adminPaymentRequestOpt = paymentRequestRepo.findOne(
-					Example.of(PaymentRequestEnt.builder().lockUuid(ADMIN_LOCK_UUID).build()));
-			}
-			
-			if(adminPaymentRequestOpt.isEmpty() || DropRequestStatus.PENDING_REVIEW.equals(adminPaymentRequestOpt.get().getStatus())
-					|| DropRequestStatus.POPULATING_ADDRESSES.equals(adminPaymentRequestOpt.get().getStatus())) {
-				return;
-			}
+		if (!lockActiveSchedules(uuid)) {
+			return;
 		}
 
-		PaymentRequestEnt paymentRequest = null;
-		String uuid = null;
-		if(adminPaymentRequestOpt.isEmpty()) {
-			uuid = airdropVerificationService.lockPaymentRequest();
-			paymentRequest = airdropVerificationService.getPaymentRequestToProcess(uuid);
-			if (paymentRequest == null) {
-				return;// nothing to process
+		List<DropScheduleEnt> schedules = dropScheduleRepo
+				.findAll(Example.of(DropScheduleEnt.builder().dropScheduleStatus(DropScheduleStatus.ACTIVE).build()));
+
+		schedules.stream().forEach(s -> handleSchedule(s));
+
+		dropScheduleRepo.removeUuid(uuid);
+
+	}
+
+	private void handleSchedule(DropScheduleEnt sched) {
+
+		if (sched.getRepeatUntilDate().after(new Date())) {
+			markScheduleComplete(sched);
+			return; 
+		}
+
+		List<DropScheduleRunEnt> scheduleRuns = dropScheduleRunRepo
+				.findAll(Example.of(DropScheduleRunEnt.builder().dropScheduleId(sched.getId()).build()));
+
+		DropScheduleRunEnt latestRun = getLatestRun(scheduleRuns);
+		
+		Optional<PaymentRequestEnt> latestPaymentReq = paymentRequestRepo.findOne(Example.of(PaymentRequestEnt.builder().id(latestRun.getDropRequestId()).build()));
+		
+		if(DropRequestStatus.COMPLETE.equals(latestPaymentReq.get().getStatus())){
+			Date schedStartTime = latestPaymentReq.get().getStartTime();
+			
+			Date nextRun = getNextRun(schedStartTime, sched.getFrequency());
+			
+			if(nextRun!=null && nextRun.after(latestPaymentReq.get().getCreateDate())) {
+				
+				//TODO create a new airdrop
+				
+				//TODO create a new schedule run
 			}
-		}else {
-			uuid = ADMIN_LOCK_UUID;
-			paymentRequest = adminPaymentRequestOpt.get();
+			
+		}
+
+		if(DropRequestStatus.REJECTED.equals(latestPaymentReq.get().getStatus())){
+			markScheduleCompleteRejected(sched);
+			return;
+			
+		}
+
+
+	}
+	//TODO check if time goes past current year week into next year week that the date is still correct
+	private Date getNextRun(Date schedStartTime, DropFrequency frequency) {
+		
+		switch (frequency){
+			case ONCE: return null;
+		case ANNUALLY: return getClosestTimeToNow(schedStartTime, Calendar.YEAR);
+		case DAILY:return getClosestTimeToNow(schedStartTime, Calendar.DATE);
+		case MONTHLY:return getClosestTimeToNow(schedStartTime, Calendar.MONTH);
+		case WEEKLY:return getClosestTimeToNow(schedStartTime, Calendar.WEEK_OF_YEAR);
+		default:
+			break;
+		}
+		return null;
+	}
+
+	protected Date getClosestTimeToNow(Date schedStartTime, int timeUnit) {
+		Calendar now = Calendar.getInstance();
+		Calendar t = Calendar.getInstance();
+		t.setTime(schedStartTime);
+		
+		
+		while(t.before(now)) {
+			t.add(timeUnit, 1);
+			if(t.after(now)) {
+				t.add(timeUnit, -1);
+				return t.getTime();
+			}
+			
 		}
 		
-		try {
+		return null;
+	}
 
-			List<FseTransaction> transactions = transactionHistoryService.getTransactionsBetweenDates(
-					paymentRequest.getFromClassicAddress(), paymentRequest.getCreateDate(), new Date());
-			
-			PaymentRequestEnt paymentRequestAfterVerify = airdropVerificationService.verifyDropComplete(paymentRequest, transactions,
-					false);
+	private void markScheduleCompleteRejected(DropScheduleEnt sched) {
+		
+		DropScheduleEnt schedComplete = dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.COMPLETE).build());
+		
+		//TODO send email that schedule is complete and rejected
+		
+	}
 
-			if (DropRequestStatus.COMPLETE == paymentRequestAfterVerify.getStatus()) {
-				return;
+	private void markScheduleComplete(DropScheduleEnt sched) {
+		
+		DropScheduleEnt schedComplete = dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.COMPLETE).build());
+		
+		//TODO send email that schedule is complete
+		
+	}
+
+	private DropScheduleRunEnt getLatestRun(List<DropScheduleRunEnt> scheduleRuns) {
+
+		DropScheduleRunEnt latestRun = null;
+
+		for (DropScheduleRunEnt run : scheduleRuns) {
+			if (latestRun == null) {
+				latestRun = run;
+			} else if (latestRun.getCreateDate().after(run.getCreateDate())) {
+				latestRun = run;
 			}
-
-
-			List<DropRecipientEnt> recipients = dropRecipientRepo
-					.findAll(Example.of(DropRecipientEnt.builder().dropRequestId(paymentRequest.getId()).build())).stream()
-					.filter(r -> DropRecipientStatus.VERIFIED != r.getStatus() ).collect(Collectors.toList());
-			log.info("STARTED Airdrop for UUID: {} paymentRequest ID: {} total eligible: {}",
-					paymentRequest.getLockUuid(), paymentRequest.getId(), recipients.size());
-
-			AtomicInteger count = new AtomicInteger();
-			for (DropRecipientEnt recipient : recipients) {
-
-				count.incrementAndGet();
-				Thread.sleep(200);//as measured with legacy implementation.  4000 tx in ~ 10 minutes
-				handlePayment(paymentRequest, recipient, count);
-
-			}
-
-			Thread.sleep(30000);// wait a minute. Make sure anything that was queued is done
-			List<FseTransaction> transactionsAfterProcessing = transactionHistoryService.getTransactionsBetweenDates(
-					paymentRequest.getFromClassicAddress(), paymentRequest.getCreateDate(), new Date());
-			
-			PaymentRequestEnt finalizedPayment = airdropVerificationService.verifyDropComplete(paymentRequest, transactionsAfterProcessing, true);
-
-			log.info("Airdrop scheduler completed for {}", finalizedPayment);
-		} catch (Exception e) {
-			log.error("Error verifying drop ", e);
-			airdropVerificationService.resetUuidForProcessing(paymentRequest);
 		}
 	}
 
-	private DropRecipientEnt handlePayment(PaymentRequestEnt p, DropRecipientEnt recipient, AtomicInteger count) {
+	private boolean lockActiveSchedules(String uuid) {
 
-		count.incrementAndGet();
-		// check if job canceled
-		if (cancelDropRequestRepo.exists(Example.of(CancelDropRequestEnt.builder().dropRequestId(p.getId()).build()))) {
-			try {
-				p.setFailReason("Job Cancelled by user");
-				p.setStatus(DropRequestStatus.REJECTED);
-				p.setFromPrivateKey("");
-				p.setFromSigningPublicKey("");
-				paymentRequestRepo.save(p);
+		// try to flag one or more payment requests to start work on it
+		dropScheduleRepo.updateUuid(uuid);
 
-				return recipient;
-			} catch (Exception e) {
-				log.error("Error Job Cancelled by user - " + p.getId(), e);
-			}
+		Optional<DropScheduleEnt> schedule = dropScheduleRepo
+				.findOne(Example.of(DropScheduleEnt.builder().dropScheduleStatus(DropScheduleStatus.ACTIVE).build()));
+
+		if (schedule.isPresent()) {
+
+			return schedule.get().getLockUuid().equals(uuid);
 		}
+		return false;
 
-		FsePaymentRequest payment = FsePaymentRequest.builder()
-				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-				.currencyName(p.getCurrencyNameForProcess()).amount(p.getAmount()).agreeFee(true)
-				.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
-				.paymentType(p.getPaymentType()).maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction())
-				.useBlacklist(p.getUseBlacklist())
-				.fromSigningPublicKey(p.getFromSigningPublicKey()).build();
-		DropRecipientEnt paidRecipient = paymentService.allowPayment(payment, recipient);
-
-		if ("tefBAD_AUTH".equals(paidRecipient.getCode())) {
-			log.info("Rejecting remaining payments due to bad code on recipient" + paidRecipient);
-
-			p.setFailReason("Public Signing or Private key incorrect for from address");
-			p.setStatus(DropRequestStatus.REJECTED);
-			p.setFromPrivateKey("");
-			p.setFromSigningPublicKey("");
-			paymentRequestRepo.save(p);
-		}
-
-		return paidRecipient;
 	}
 
 }

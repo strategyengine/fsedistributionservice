@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
 import io.swagger.annotations.ApiModel;
@@ -93,4 +94,11 @@ public class FsePaymentRequest implements Serializable {
 	
 	@ApiModelProperty(value = "NFT taxon used to filter NFT owners by the taxon", required = false)
 	private Long nftTaxon;
+
+	@ApiModelProperty(value = "If drop is recurring, frequncy is DAILY, WEEKLY, MONTHLY, ANNUALLY", required = false)
+	private DropFrequency frequency;
+
+	@ApiModelProperty(value = "If there is a frequency, repeat until this date.  If any drop fails, you will need to recreate the job.  No other repetitions will occur", required = false)
+	private Date repeatUntilDate;
+
 }

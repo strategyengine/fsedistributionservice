@@ -14,6 +14,7 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 import com.strategyengine.xrpl.fsedistributionservice.entity.convert.KeyConverter;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropType;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
@@ -136,4 +137,8 @@ public class PaymentRequestEnt {
 	
 	@Column(name = "NFT_TAXON")
 	private Long nftTaxon;
+	
+	@Column(name = "CONTACT_EMAIL")
+	private String contactEmail;
+	
 }

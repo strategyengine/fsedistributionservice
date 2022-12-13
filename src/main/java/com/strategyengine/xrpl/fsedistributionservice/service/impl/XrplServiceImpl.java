@@ -32,7 +32,10 @@ import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientServi
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientServiceImpl;
 import com.strategyengine.xrpl.fsedistributionservice.entity.CancelDropRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropType;
@@ -45,6 +48,8 @@ import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
 import com.strategyengine.xrpl.fsedistributionservice.model.UserAddresses;
 import com.strategyengine.xrpl.fsedistributionservice.repo.CancelDropRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
@@ -115,6 +120,14 @@ public class XrplServiceImpl implements XrplService {
 	@Autowired
 	protected ConfigService configService;
 
+	@VisibleForTesting
+	@Autowired
+	protected DropScheduleRepo dropScheduleRepo;
+
+	@VisibleForTesting
+	@Autowired
+	protected DropScheduleRunRepo dropScheduleRunRepo;
+
 	private String environment = System.getenv("ENV");
 
 	protected ExecutorService executorPopulateAddresses = Executors.newFixedThreadPool(5);
@@ -175,7 +188,7 @@ public class XrplServiceImpl implements XrplService {
 			validationService.validateClassicAddress(classicAddress);
 			AccountLinesResult trustLines = getTrustLinesWithRetry(classicAddress, 0, null);
 
-			if(trustLines == null) {
+			if (trustLines == null) {
 				return null;
 			}
 			List<FseTrustLine> fseTrustLines = trustLines.lines().stream()
@@ -290,7 +303,7 @@ public class XrplServiceImpl implements XrplService {
 				.currencyName(paymentRequestPre.getCurrencyName().trim()).currencyNameForProcess(currency)
 				.dropType(paymentRequest.isGlobalIdVerified() ? DropType.GLOBALID_SPECIFICADDRESSES
 						: DropType.SPECIFICADDRESSES)
-				.startTime(paymentRequestPre.getStartTime()!=null ? paymentRequestPre.getStartTime()  : new Date())
+				.startTime(paymentRequestPre.getStartTime() != null ? paymentRequestPre.getStartTime() : new Date())
 				.fromClassicAddress(paymentRequest.getFromClassicAddress().trim())
 				.paymentType(paymentRequest.getPaymentType())
 				.snapshotCurrencyName(paymentRequest.getSnapshotCurrencyName())
@@ -387,7 +400,8 @@ public class XrplServiceImpl implements XrplService {
 
 		List<DropRecipientEnt> savedRecipients = dropRecipientRepo.saveAll(removeDuplicates(recipients));
 
-		if(paymentRequestPre.getToClassicAddresses()!=null && !paymentRequestPre.getToClassicAddresses().isEmpty() && paymentRequestPre.getNftIssuingAddress()==null) {
+		if (paymentRequestPre.getToClassicAddresses() != null && !paymentRequestPre.getToClassicAddresses().isEmpty()
+				&& paymentRequestPre.getNftIssuingAddress() == null) {
 			logRecipientCountDiff(paymentRequestPre, recipients, savedRecipients, paymentRequestEnt.getId());
 		}
 
@@ -396,8 +410,8 @@ public class XrplServiceImpl implements XrplService {
 			try {
 				paymentRequestEnt.setFailReason("Job Cancelled");
 				paymentRequestEnt.setStatus(DropRequestStatus.REJECTED);
-				paymentRequestEnt.setFromPrivateKey("");
-				paymentRequestEnt.setFromSigningPublicKey("");
+				paymentRequestEnt.setFromPrivateKey(null);
+				paymentRequestEnt.setFromSigningPublicKey(null);
 				return paymentRequestRepo.save(paymentRequestEnt);
 
 			} catch (Exception e) {
@@ -415,7 +429,15 @@ public class XrplServiceImpl implements XrplService {
 			savedPaymentRequest = paymentRequestRepo
 					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.PENDING_REVIEW).build());
 		}
+
+		saveSchedule(savedPaymentRequest, paymentRequestPre);
+
 		return savedPaymentRequest;
+
+	}
+
+	private void saveSchedule(PaymentRequestEnt savedPaymentRequest, FsePaymentRequest paymentRequestPre) {
+		// TODO Auto-generated method stub
 
 	}
 
@@ -520,8 +542,8 @@ public class XrplServiceImpl implements XrplService {
 		paymentRequestEnt.setStatus(DropRequestStatus.REJECTED);
 		String m = message != null && message.length() > 200 ? message.substring(0, 200) : message;
 		log.info("Rejected drop " + paymentRequestEnt, m);
-		paymentRequestEnt.setFromPrivateKey("");
-		paymentRequestEnt.setFromSigningPublicKey("");
+		paymentRequestEnt.setFromPrivateKey(null);
+		paymentRequestEnt.setFromSigningPublicKey(null);
 		paymentRequestRepo.save(paymentRequestEnt);
 		throw new BadRequestException(message);
 
@@ -533,8 +555,8 @@ public class XrplServiceImpl implements XrplService {
 		String m = e.getMessage() != null && e.getMessage().length() > 200 ? e.getMessage().substring(0, 200)
 				: e.getMessage();
 		log.info("Rejected drop " + paymentRequestEnt, m);
-		paymentRequestEnt.setFromPrivateKey("");
-		paymentRequestEnt.setFromSigningPublicKey("");
+		paymentRequestEnt.setFromPrivateKey(null);
+		paymentRequestEnt.setFromSigningPublicKey(null);
 		paymentRequestRepo.save(paymentRequestEnt);
 		throw e;
 
@@ -562,7 +584,7 @@ public class XrplServiceImpl implements XrplService {
 
 		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
 				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
-				.startTime(paymentRequestPre.getStartTime()!=null ? paymentRequestPre.getStartTime() : new Date())
+				.startTime(paymentRequestPre.getStartTime() != null ? paymentRequestPre.getStartTime() : new Date())
 				.maxBalance(
 						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
 								: null)
@@ -586,7 +608,24 @@ public class XrplServiceImpl implements XrplService {
 		executorPopulateAddresses.execute(
 				() -> sendFsePaymentToTrustlinesThread(paymentRequestEnt, retryFailedAddresses, p, paymentRequestPre));
 
+		saveSchedule(paymentRequestEnt.getId(), paymentRequestPre.getFrequency(),
+				paymentRequestPre.getRepeatUntilDate());
+
 		return paymentRequestEnt;
+
+	}
+
+	private void saveSchedule(Long dropRequestId, DropFrequency frequency, Date repeatUntilDate) {
+
+		if (frequency != null && !DropFrequency.ONCE.equals(frequency) && repeatUntilDate != null) {
+			DropScheduleEnt schedule = dropScheduleRepo.save(DropScheduleEnt.builder().createDate(new Date())
+					.frequency(frequency).repeatUntilDate(repeatUntilDate).build());
+			
+			dropScheduleRunRepo.save(DropScheduleRunEnt.builder().dropRequestId(dropRequestId)
+					.createDate(new Date())
+					.dropScheduleId(schedule.getId())
+					.build());
+		}
 
 	}
 
@@ -713,8 +752,8 @@ public class XrplServiceImpl implements XrplService {
 			try {
 				paymentRequestEnt.setFailReason("Job Cancelled");
 				paymentRequestEnt.setStatus(DropRequestStatus.REJECTED);
-				paymentRequestEnt.setFromPrivateKey("");
-				paymentRequestEnt.setFromSigningPublicKey("");
+				paymentRequestEnt.setFromPrivateKey(null);
+				paymentRequestEnt.setFromSigningPublicKey(null);
 				return paymentRequestRepo.save(paymentRequestEnt);
 
 			} catch (Exception e) {
@@ -764,7 +803,7 @@ public class XrplServiceImpl implements XrplService {
 				.maxBalance(
 						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
 								: null)
-				.startTime(paymentRequestPre.getStartTime()!=null? paymentRequestPre.getStartTime() : new Date())
+				.startTime(paymentRequestPre.getStartTime() != null ? paymentRequestPre.getStartTime() : new Date())
 				.paymentType(paymentRequestPre.getPaymentType() == null ? PaymentType.FLAT
 						: paymentRequestPre.getPaymentType())
 				.populateEnvironment(environment).amount(p.getAmount().trim()).createDate(now())
@@ -844,12 +883,12 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	private Set<DropRecipientEnt> removeDuplicates(Set<DropRecipientEnt> recipients) {
-		
+
 		Set<DropRecipientEnt> recipientsToSave = new HashSet<>();
 		Set<String> foundRecipients = new HashSet<>();
-		for (DropRecipientEnt recip : recipients) {	
-			if(!StringUtil.isNullOrEmpty(recip.getOwnedNftId())){
-				//NFT owners could receive multiple payments
+		for (DropRecipientEnt recip : recipients) {
+			if (!StringUtil.isNullOrEmpty(recip.getOwnedNftId())) {
+				// NFT owners could receive multiple payments
 				return recipients;
 			}
 			if (!foundRecipients.contains(recip.getAddress())) {

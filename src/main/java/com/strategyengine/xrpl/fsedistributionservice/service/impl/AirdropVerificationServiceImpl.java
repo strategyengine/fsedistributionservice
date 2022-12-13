@@ -117,8 +117,8 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 				try {
 					paymentRequestInitial.setFailReason("Job Cancelled");
 					paymentRequestInitial.setStatus(DropRequestStatus.REJECTED);
-					paymentRequestInitial.setFromPrivateKey("");
-					paymentRequestInitial.setFromSigningPublicKey("");
+					paymentRequestInitial.setFromPrivateKey(null);
+					paymentRequestInitial.setFromSigningPublicKey(null);
 					return paymentRequestRepo.save(paymentRequestInitial);
 
 				} catch (Exception e) {
@@ -202,8 +202,7 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 					log.info("Airdrop marked COMPLETE, wiping keys id:{} currency:{}", finalizedFeeCollected.getId(),
 							finalizedFeeCollected.getCurrencyName());
 
-					return paymentRequestRepo.save(finalizedFeeCollected.toBuilder().updateDate(new Date()).lockUuid(null)
-							.fromPrivateKey(null).fromSigningPublicKey(null).status(DropRequestStatus.COMPLETE).failReason("Address does not have enough tokens to send. " + finalizedFeeCollected.getFromClassicAddress()).build());
+					return paymentRequestRepo.save(finalizedFeeCollected.toBuilder().updateDate(new Date()).lockUuid(null).status(DropRequestStatus.COMPLETE).failReason("Address does not have enough tokens to send. " + finalizedFeeCollected.getFromClassicAddress()).build());
 				}
 			}
 			

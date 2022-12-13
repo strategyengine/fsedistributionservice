@@ -3,6 +3,7 @@ package com.strategyengine.xrpl.fsedistributionservice.model;
 import java.io.Serializable;
 import java.util.Date;
 
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
 import io.swagger.annotations.ApiModel;
@@ -92,5 +93,12 @@ public class FsePaymentTrustlinesRequest implements Serializable {
 
 	@ApiModelProperty(value = "The point after which this airdrop can begin", required = false)
 	private Date startTime;
+	
+	@ApiModelProperty(value = "If drop is recurring, frequncy is DAILY, WEEKLY, MONTHLY, ANNUALLY", required = false)
+	private DropFrequency frequency;
+	
+	@ApiModelProperty(value = "If there is a frequency, repeat until this date.  If any drop fails, you will need to recreate the job.  No other repetitions will occur", required = false)
+	private Date repeatUntilDate;
+
 
 }

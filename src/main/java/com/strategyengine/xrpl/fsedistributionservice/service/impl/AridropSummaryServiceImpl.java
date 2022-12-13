@@ -2,6 +2,7 @@ package com.strategyengine.xrpl.fsedistributionservice.service.impl;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -15,12 +16,17 @@ import org.springframework.stereotype.Service;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.SummaryResult;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
 import com.strategyengine.xrpl.fsedistributionservice.model.AirdropStatus;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 
@@ -38,6 +44,14 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 	@Autowired
 	protected PaymentRequestRepo paymentRequestRepo;
 
+	@VisibleForTesting
+	@Autowired
+	protected DropScheduleRepo dropScheduleRepo;
+	
+	@VisibleForTesting
+	@Autowired
+	protected DropScheduleRunRepo dropScheduleRunRepo;
+	
 	@Override
 	public List<AirdropStatus> getAirdrops(String issuingAddress) {
 		List<PaymentRequestEnt> paymentRequests = paymentRequestRepo.findAll(
@@ -58,6 +72,21 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 	}
 
 	private AirdropStatus convert(PaymentRequestEnt p) {
+		
+		List<DropScheduleRunEnt> dropRuns = dropScheduleRunRepo.findAll(Example.of(DropScheduleRunEnt.builder().dropRequestId(p.getId()).build()));
+		
+		Date repeatUntilDate = null;
+		DropFrequency frequency = DropFrequency.ONCE;
+		if(!dropRuns.isEmpty()) {
+			
+			Optional<DropScheduleEnt> dropSchedule = dropScheduleRepo.findById(dropRuns.get(0).getDropRequestId());
+			
+			if(dropSchedule.isPresent()) {
+				repeatUntilDate = dropSchedule.get().getRepeatUntilDate();
+				frequency = dropSchedule.get().getFrequency();
+			}
+		}
+		
 		return AirdropStatus.builder().amount(p.getAmount()).createDate(p.getCreateDate())
 				.currencyName(p.getCurrencyName()).currencyNameForProcess(p.getCurrencyNameForProcess())
 				.dropType(p.getDropType()).failReason(p.getFailReason()).fromClassicAddress(p.getFromClassicAddress())
@@ -71,6 +100,8 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 				.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).updateDate(p.getUpdateDate())
 				.nftIssuingAddress(p.getNftIssuerAddress())
 				.startTime(p.getStartTime())
+				.frequency(frequency)
+				.repeatUntilDate(repeatUntilDate)
 				.nftTaxon(String.valueOf(p.getNftTaxon())).build();
 	}
 
