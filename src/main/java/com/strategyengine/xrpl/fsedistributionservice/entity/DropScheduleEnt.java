@@ -58,4 +58,8 @@ public class DropScheduleEnt {
 	@Enumerated(EnumType.STRING)
 	private DropScheduleStatus dropScheduleStatus;
 	
+	//entry in drop_request table with a status of scheduled from which all scheduled runs are based
+	@Column(name = "DROP_REQUEST_ID")
+	private Long dropRequestId;
+	
 }

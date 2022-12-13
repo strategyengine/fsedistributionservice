@@ -307,7 +307,8 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 	public @Nullable PaymentRequestEnt getPaymentRequestToProcess(String uuid) {
 
 		List<PaymentRequestEnt> paymentRequests = paymentRequestRepo.findAll(
-				Example.of(PaymentRequestEnt.builder().lockUuid(uuid).build()), Sort.by("dropType", "updateDate"));
+				Example.of(PaymentRequestEnt.builder()
+						.lockUuid(uuid).build()), Sort.by("dropType", "updateDate"));
 
 		if (paymentRequests.isEmpty()) {
 			return null;
@@ -323,6 +324,11 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 			}
 			
 			if (paymentRequestUpdatedTooRecently(p)) {
+				continue;
+			}
+			
+			if (!(DropRequestStatus.QUEUED.equals(p.getStatus()) || DropRequestStatus.IN_PROGRESS.equals(p.getStatus()))){
+				//do not run drops on scheduled, rejected, complete status
 				continue;
 			}
 

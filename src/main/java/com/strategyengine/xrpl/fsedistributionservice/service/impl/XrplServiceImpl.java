@@ -299,6 +299,7 @@ public class XrplServiceImpl implements XrplService {
 		}
 
 		PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder()
+				.contactEmail(paymentRequestPre.getEmail())
 				.populateEnvironment(environment).amount(paymentRequest.getAmount().trim()).createDate(now())
 				.currencyName(paymentRequestPre.getCurrencyName().trim()).currencyNameForProcess(currency)
 				.dropType(paymentRequest.isGlobalIdVerified() ? DropType.GLOBALID_SPECIFICADDRESSES
@@ -482,7 +483,11 @@ public class XrplServiceImpl implements XrplService {
 		savedRecipients.stream().forEach(r -> updatePaymentAmount(r, trustlines, paymentReq,
 				issuingAddressForProportion, currencyForProportion));
 
-		paymentReq.setStatus(DropRequestStatus.PENDING_REVIEW);
+		if(paymentReq.getStartTime()!=null) {
+			paymentReq.setStatus(DropRequestStatus.SCHEDULED);		
+		}else {
+			paymentReq.setStatus(DropRequestStatus.PENDING_REVIEW);
+		}
 		paymentRequestRepo.save(paymentReq);
 
 	}
@@ -584,6 +589,7 @@ public class XrplServiceImpl implements XrplService {
 
 		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
 				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
+				.contactEmail(paymentRequestPre.getEmail())
 				.startTime(paymentRequestPre.getStartTime() != null ? paymentRequestPre.getStartTime() : new Date())
 				.maxBalance(
 						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
@@ -760,8 +766,9 @@ public class XrplServiceImpl implements XrplService {
 				throw new RuntimeException("Canceled job while populating addresses" + paymentRequestEnt, e);
 			}
 		}
-
-		return paymentRequestRepo.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.PENDING_REVIEW).build());
+		
+		DropRequestStatus status = paymentRequestEnt.getStartTime()!=null ? DropRequestStatus.PENDING_REVIEW : DropRequestStatus.SCHEDULED;
+		return paymentRequestRepo.save(paymentRequestEnt.toBuilder().status(status).build());
 
 	}
 
@@ -800,6 +807,7 @@ public class XrplServiceImpl implements XrplService {
 
 		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
 				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
+				.contactEmail(paymentRequestPre.getEmail())
 				.maxBalance(
 						paymentRequestPre.getMaxBalance() != null ? String.valueOf(paymentRequestPre.getMaxBalance())
 								: null)

@@ -100,5 +100,7 @@ public class FsePaymentTrustlinesRequest implements Serializable {
 	@ApiModelProperty(value = "If there is a frequency, repeat until this date.  If any drop fails, you will need to recreate the job.  No other repetitions will occur", required = false)
 	private Date repeatUntilDate;
 
+	@ApiModelProperty(value = "Email contact", required = false)
+	private String email;
 
 }

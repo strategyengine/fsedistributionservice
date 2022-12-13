@@ -7,34 +7,37 @@
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 	<changeSet id="1.24" author="bknapp">
 
-		<createSequence sequenceName="drop_schedule_id_seq" startValue="1" incrementBy="1"/>
-		<createSequence sequenceName="drop_schedule_run_id_seq" startValue="1" incrementBy="1"/>
+		<createSequence sequenceName="drop_schedule_id_seq"
+			startValue="1" incrementBy="1" />
+		<createSequence sequenceName="drop_schedule_run_id_seq"
+			startValue="1" incrementBy="1" />
 
 		<createTable tableName="DROP_SCHEDULE">
 			<column name="ID" type="int" autoIncrement="true">
 				<constraints primaryKey="true" nullable="false" />
 			</column>
-				<column name="FREQUENCY" type="VARCHAR(55)" />
-				<column name="REPEAT_UNTIL_DATE" type="DATETIME" />
-				<column name="CREATE_DATE" type="DATETIME" />
-				<column name="STATUS" type="VARCHAR(55)" />
-				<column name="LOCK_UUID" type="VARCHAR(255)" />
+			<column name="FREQUENCY" type="VARCHAR(55)" />
+			<column name="REPEAT_UNTIL_DATE" type="DATETIME" />
+			<column name="CREATE_DATE" type="DATETIME" />
+			<column name="STATUS" type="VARCHAR(55)" />
+			<column name="LOCK_UUID" type="VARCHAR(255)" />
+			<column name="DROP_REQUEST_ID" type="int" />
 		</createTable>
 
 		<createTable tableName="DROP_SCHEDULE_RUN">
 			<column name="ID" type="int" autoIncrement="true">
 				<constraints primaryKey="true" nullable="false" />
 			</column>
-				<column name="DROP_SCHEDULE_ID" type="int" />
-				<column name="DROP_REQUEST_ID" type="int" />
-				<column name="CREATE_DATE" type="DATETIME" />
+			<column name="DROP_SCHEDULE_ID" type="int" />
+			<column name="DROP_REQUEST_ID" type="int" />
+			<column name="CREATE_DATE" type="DATETIME" />
 		</createTable>
-				
-		
+
+
 		<addColumn tableName="DROP_REQUEST">
 			<column name="CONTACT_EMAIL" type="VARCHAR(255)" />
-		</addColumn>	
-		
+		</addColumn>
+
 	</changeSet>
 
 </databaseChangeLog>

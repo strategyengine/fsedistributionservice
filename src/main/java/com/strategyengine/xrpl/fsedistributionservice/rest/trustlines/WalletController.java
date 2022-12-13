@@ -2,7 +2,6 @@ package com.strategyengine.xrpl.fsedistributionservice.rest.trustlines;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,7 +10,6 @@ import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
 import org.xrpl.xrpl4j.wallet.Wallet;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.strategyengine.xrpl.fsedistributionservice.FseConstants;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseWallet;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;

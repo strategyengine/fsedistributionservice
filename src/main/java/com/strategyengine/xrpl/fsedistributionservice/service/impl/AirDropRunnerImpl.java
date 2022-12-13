@@ -79,7 +79,8 @@ public class AirDropRunnerImpl {
 			}
 			
 			if(adminPaymentRequestOpt.isEmpty() || DropRequestStatus.PENDING_REVIEW.equals(adminPaymentRequestOpt.get().getStatus())
-					|| DropRequestStatus.POPULATING_ADDRESSES.equals(adminPaymentRequestOpt.get().getStatus())) {
+					|| DropRequestStatus.POPULATING_ADDRESSES.equals(adminPaymentRequestOpt.get().getStatus())
+					|| DropRequestStatus.SCHEDULED.equals(adminPaymentRequestOpt.get().getStatus())) {
 				return;
 			}
 		}

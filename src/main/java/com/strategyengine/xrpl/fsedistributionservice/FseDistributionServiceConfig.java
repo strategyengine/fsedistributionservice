@@ -1,5 +1,7 @@
 package com.strategyengine.xrpl.fsedistributionservice;
 
+import java.util.Properties;
+
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -8,10 +10,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.xrpl.xrpl4j.client.XrplClient;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -38,6 +39,30 @@ public class FseDistributionServiceConfig {
 	@Value("${fsedistributionservice.version}")
 	private String version;
 	
+
+	@Value("${fsedistributionservice.email.password}")
+	private String emailPassword;
+	
+	@Value("${fsedistributionservice.email.address}")
+	private String emailAddress;
+	
+	@Bean
+	public JavaMailSender getJavaMailSender() {
+	    JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+	    mailSender.setHost("smtp.gmail.com");
+	    mailSender.setPort(587);
+	    
+	    mailSender.setUsername(emailAddress);
+	    mailSender.setPassword(emailPassword);
+	    
+	    Properties props = mailSender.getJavaMailProperties();
+	    props.put("mail.transport.protocol", "smtp");
+	    props.put("mail.smtp.auth", "true");
+	    props.put("mail.smtp.starttls.enable", "true");
+	    props.put("mail.debug", "true");
+	    
+	    return mailSender;
+	}
 
 	@Bean(name = "xrplClient1")
 	public XrplClient xrplClient1() throws Exception {
