@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -101,7 +102,8 @@ public class TrustlinePaymentController {
 	@ApiOperation(value = "Cancels a running Airdrop")
 	@RequestMapping(value = "/api/payment/trustlines/cancel", method = RequestMethod.POST)
 	public ResponseEntity<FsePaymentRequest> paymentTrustlines(
-			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
+			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest,
+			@ApiParam(value = "If true, will cancel scheduled jobs as well", required = true) @RequestParam(value="cancelScheduled") Boolean cancelScheduled) {
 		
 		//only the private key and issuing address are populated
 		
@@ -109,7 +111,7 @@ public class TrustlinePaymentController {
 		log.info(
 				"payment/trustlines/cancel");
 
-		FsePaymentRequest result = xrplService.cancelJob(paymentRequest.getFromPrivateKey(), paymentRequest.getTrustlineIssuerClassicAddress());
+		FsePaymentRequest result = xrplService.cancelJob(paymentRequest.getFromPrivateKey(), paymentRequest.getTrustlineIssuerClassicAddress(), cancelScheduled);
 		
 		return ResponseEntity.of(Optional.ofNullable(result));
 

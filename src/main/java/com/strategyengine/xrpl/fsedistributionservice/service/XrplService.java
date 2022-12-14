@@ -22,7 +22,7 @@ public interface XrplService {
 
 	PaymentRequestEnt sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest paymentRequest, List<DropRecipientEnt> retryFailedAddresses);
 
-	FsePaymentRequest cancelJob(String privateKey, String issuingAddress);
+	FsePaymentRequest cancelJob(String privateKey, String issuingAddress, Boolean cancelScheduled);
 
 	List<FseTrustLine> getTrustLines(String classicAddress, FseSort sort);
 
