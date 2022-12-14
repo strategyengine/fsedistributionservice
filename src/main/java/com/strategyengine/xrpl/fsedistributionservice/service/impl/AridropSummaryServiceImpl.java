@@ -157,6 +157,17 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 		
 		return incomplete.stream().map(p -> convert(p)).collect(Collectors.toList());
 	}
+	
+	@Override
+	public List<AirdropStatus> getScheduledAirdrops() {
+
+		List<PaymentRequestEnt> incomplete = paymentRequestRepo.findAll(
+				
+				Example.of(PaymentRequestEnt.builder().status(DropRequestStatus.SCHEDULED).build()),
+				Sort.by("createDate"));
+		
+		return incomplete.stream().map(p -> convert(p)).collect(Collectors.toList());
+	}
 
 	@Override
 	public List<AirdropStatus> getAirdrops() {
@@ -183,5 +194,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 		return status;
 
 	}
+
+
 
 }

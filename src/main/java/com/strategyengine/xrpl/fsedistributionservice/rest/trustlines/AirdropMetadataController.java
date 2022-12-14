@@ -86,6 +86,13 @@ public class AirdropMetadataController {
 	public List<AirdropStatus> incompleteAirdrops() {
 		
 		return airdropSummaryService.getIncompleteAirdrops();
+	}
+	
+	@ApiOperation(value = "Fetch  scheduled airdrop")
+	@RequestMapping(value = "/api/airdrop/scheduled", method = RequestMethod.GET)
+	public List<AirdropStatus> scheduled() {
+		
+		return airdropSummaryService.getScheduledAirdrops();
 	}	
 	
 	@ApiOperation(value = "Fetch airdrops")

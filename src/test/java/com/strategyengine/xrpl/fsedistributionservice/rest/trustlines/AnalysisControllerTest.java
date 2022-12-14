@@ -43,9 +43,9 @@ public class AnalysisControllerTest {
 	public void testTrustLines() {
 		List<FseTrustLine> expected = trustLines();
 		
-		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.of(""), Optional.empty(), true, FseSort.RICH)).thenReturn(expected);
-		Mockito.when(currencyHexService.fixCurrencyCode(null)).thenReturn("");
-		List<FseTrustLine> actual = sut.trustLines(classicAddress, null, true, true);
+		Mockito.when(xrplService.getTrustLines(classicAddress, Optional.of("BLAH"), Optional.of("FSE"), true, FseSort.RICH)).thenReturn(expected);
+		Mockito.when(currencyHexService.fixCurrencyCode("FSE")).thenReturn("BLAH");
+		List<FseTrustLine> actual = sut.trustLines(classicAddress, "FSE", true, true);
 
 		Assertions.assertEquals(expected, actual);
 	}

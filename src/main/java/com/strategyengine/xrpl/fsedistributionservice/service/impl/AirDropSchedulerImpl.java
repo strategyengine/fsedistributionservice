@@ -66,7 +66,7 @@ public class AirDropSchedulerImpl {
 	protected ValidationService validationService;
 
 	// runs every 5 minutes
-	@Scheduled(fixedDelay = 1000 * 60 * 5) // @Scheduled(fixedDelay = 1000 * 60 * 5)
+	@Scheduled(fixedDelay = 1000 * 10) // @Scheduled(fixedDelay = 1000 * 60 * 5)
 	public void checkScheduledDrops() {
 		String uuid = UUID.randomUUID().toString();
 
@@ -307,7 +307,7 @@ public class AirDropSchedulerImpl {
 		for (DropScheduleRunEnt run : scheduleRuns) {
 			if (latestRun == null) {
 				latestRun = run;
-			} else if (latestRun.getCreateDate().after(run.getCreateDate())) {
+			} else if (latestRun.getCreateDate().before(run.getCreateDate())) {
 				latestRun = run;
 			}
 		}

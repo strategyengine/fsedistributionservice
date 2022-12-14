@@ -15,4 +15,6 @@ public interface AirdropSummaryService {
 
 	List<AirdropStatus> getIncompleteAirdrops();
 
+	List<AirdropStatus> getScheduledAirdrops();
+
 }

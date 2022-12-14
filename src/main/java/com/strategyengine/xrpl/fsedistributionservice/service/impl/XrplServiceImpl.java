@@ -616,7 +616,7 @@ public class XrplServiceImpl implements XrplService {
 
 	private PaymentRequestEnt saveSchedule(PaymentRequestEnt paymentRequestEnt, DropFrequency frequency, Date repeatUntilDate) {
 
-		if (paymentRequestEnt.getStartTime() == null || frequency == null) {
+		if (paymentRequestEnt==null || paymentRequestEnt.getStartTime() == null || frequency == null) {
 			return paymentRequestEnt;
 		}
 
