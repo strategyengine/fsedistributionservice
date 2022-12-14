@@ -34,16 +34,16 @@ public class AirdropStatus implements Serializable {
 	
 	private Long id;
 
-	@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
+	//@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
 	private Date createDate;
 	
-	@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
+	//@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
 	private Date updateDate;
 
-	@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
+	//@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
 	private Date startTime;
 	
-	@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
+	//@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
 	private Date repeatUntilDate;
 	
 	private DropFrequency frequency;

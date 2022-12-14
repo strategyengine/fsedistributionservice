@@ -325,12 +325,12 @@ public class AirDropSchedulerImpl {
 		// try to flag one or more payment requests to start work on it
 		dropScheduleRepo.updateUuid(uuid);
 
-		Optional<DropScheduleEnt> schedule = dropScheduleRepo
-				.findOne(Example.of(DropScheduleEnt.builder().dropScheduleStatus(DropScheduleStatus.ACTIVE).build()));
+		List<DropScheduleEnt> schedule = dropScheduleRepo
+				.findAll(Example.of(DropScheduleEnt.builder().dropScheduleStatus(DropScheduleStatus.ACTIVE).build()));
 
-		if (schedule.isPresent()) {
+		if (!schedule.isEmpty()) {
 
-			return schedule.get().getLockUuid().equals(uuid);
+			return schedule.get(0).getLockUuid().equals(uuid);
 		}
 		return false;
 
