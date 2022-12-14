@@ -33,11 +33,11 @@ import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientServi
 import com.strategyengine.xrpl.fsedistributionservice.entity.CancelDropRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
-import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropScheduleStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropType;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
@@ -49,13 +49,13 @@ import com.strategyengine.xrpl.fsedistributionservice.model.UserAddresses;
 import com.strategyengine.xrpl.fsedistributionservice.repo.CancelDropRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
-import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ConfigService;
 import com.strategyengine.xrpl.fsedistributionservice.service.CurrencyHexService;
+import com.strategyengine.xrpl.fsedistributionservice.service.EmailService;
 import com.strategyengine.xrpl.fsedistributionservice.service.NftService;
 import com.strategyengine.xrpl.fsedistributionservice.service.PaymentService;
 import com.strategyengine.xrpl.fsedistributionservice.service.TransactionHistoryService;
@@ -124,9 +124,8 @@ public class XrplServiceImpl implements XrplService {
 	@Autowired
 	protected DropScheduleRepo dropScheduleRepo;
 
-	@VisibleForTesting
 	@Autowired
-	protected DropScheduleRunRepo dropScheduleRunRepo;
+	protected EmailService emailService;
 
 	private String environment = System.getenv("ENV");
 
@@ -299,8 +298,8 @@ public class XrplServiceImpl implements XrplService {
 		}
 
 		PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder()
-				.contactEmail(paymentRequestPre.getEmail())
-				.populateEnvironment(environment).amount(paymentRequest.getAmount().trim()).createDate(now())
+				.contactEmail(paymentRequestPre.getEmail()).populateEnvironment(environment)
+				.amount(paymentRequest.getAmount().trim()).createDate(now())
 				.currencyName(paymentRequestPre.getCurrencyName().trim()).currencyNameForProcess(currency)
 				.dropType(paymentRequest.isGlobalIdVerified() ? DropType.GLOBALID_SPECIFICADDRESSES
 						: DropType.SPECIFICADDRESSES)
@@ -431,16 +430,10 @@ public class XrplServiceImpl implements XrplService {
 					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.PENDING_REVIEW).build());
 		}
 
-		saveSchedule(savedPaymentRequest, paymentRequestPre);
-
-		return savedPaymentRequest;
+		return saveSchedule(savedPaymentRequest, paymentRequestPre.getFrequency(), paymentRequestPre.getRepeatUntilDate());
 
 	}
 
-	private void saveSchedule(PaymentRequestEnt savedPaymentRequest, FsePaymentRequest paymentRequestPre) {
-		// TODO Auto-generated method stub
-
-	}
 
 	private void logRecipientCountDiff(FsePaymentRequest paymentRequestPre, Set<DropRecipientEnt> recipients,
 			List<DropRecipientEnt> savedRecipients, Long dropRequestId) {
@@ -483,9 +476,9 @@ public class XrplServiceImpl implements XrplService {
 		savedRecipients.stream().forEach(r -> updatePaymentAmount(r, trustlines, paymentReq,
 				issuingAddressForProportion, currencyForProportion));
 
-		if(paymentReq.getStartTime()!=null) {
-			paymentReq.setStatus(DropRequestStatus.SCHEDULED);		
-		}else {
+		if (paymentReq.getStartTime() != null) {
+			paymentReq.setStatus(DropRequestStatus.SCHEDULED);
+		} else {
 			paymentReq.setStatus(DropRequestStatus.PENDING_REVIEW);
 		}
 		paymentRequestRepo.save(paymentReq);
@@ -611,27 +604,32 @@ public class XrplServiceImpl implements XrplService {
 				.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress().trim()).updateDate(now()).build());
 
-		executorPopulateAddresses.execute(
-				() -> sendFsePaymentToTrustlinesThread(paymentRequestEnt, retryFailedAddresses, p, paymentRequestPre));
-
-		saveSchedule(paymentRequestEnt.getId(), paymentRequestPre.getFrequency(),
+		PaymentRequestEnt savedPayment = saveSchedule(paymentRequestEnt, paymentRequestPre.getFrequency(),
 				paymentRequestPre.getRepeatUntilDate());
+				
+		executorPopulateAddresses.execute(
+				() -> sendFsePaymentToTrustlinesThread(savedPayment, retryFailedAddresses, p, paymentRequestPre));
 
-		return paymentRequestEnt;
+		return savedPayment;
 
 	}
 
-	private void saveSchedule(Long dropRequestId, DropFrequency frequency, Date repeatUntilDate) {
+	private PaymentRequestEnt saveSchedule(PaymentRequestEnt paymentRequestEnt, DropFrequency frequency, Date repeatUntilDate) {
 
-		if (frequency != null && !DropFrequency.ONCE.equals(frequency) && repeatUntilDate != null) {
-			DropScheduleEnt schedule = dropScheduleRepo.save(DropScheduleEnt.builder().createDate(new Date())
-					.frequency(frequency).repeatUntilDate(repeatUntilDate).build());
-			
-			dropScheduleRunRepo.save(DropScheduleRunEnt.builder().dropRequestId(dropRequestId)
-					.createDate(new Date())
-					.dropScheduleId(schedule.getId())
-					.build());
+		if (paymentRequestEnt.getStartTime() == null || frequency == null) {
+			return paymentRequestEnt;
 		}
+
+		dropScheduleRepo
+				.save(DropScheduleEnt.builder().createDate(new Date()).dropRequestId(paymentRequestEnt.getId())
+						.dropScheduleStatus(DropScheduleStatus.ACTIVE).frequency(frequency)
+						.repeatUntilDate(repeatUntilDate).build());
+
+		emailService.sendEmail(paymentRequestEnt.getContactEmail(), "Airdrop Scheduled",
+				"Airdrop has been scheduled.  <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
+						+ paymentRequestEnt.getId() + "'>Schedule Details</a>");
+
+		return paymentRequestRepo.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.SCHEDULED).build());
 
 	}
 
@@ -766,8 +764,9 @@ public class XrplServiceImpl implements XrplService {
 				throw new RuntimeException("Canceled job while populating addresses" + paymentRequestEnt, e);
 			}
 		}
-		
-		DropRequestStatus status = paymentRequestEnt.getStartTime()!=null ? DropRequestStatus.PENDING_REVIEW : DropRequestStatus.SCHEDULED;
+
+		DropRequestStatus status = paymentRequestEnt.getStartTime() != null ? DropRequestStatus.PENDING_REVIEW
+				: DropRequestStatus.SCHEDULED;
 		return paymentRequestRepo.save(paymentRequestEnt.toBuilder().status(status).build());
 
 	}

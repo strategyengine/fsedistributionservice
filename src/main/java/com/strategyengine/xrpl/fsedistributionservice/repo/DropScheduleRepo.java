@@ -19,5 +19,6 @@ public interface DropScheduleRepo extends JpaRepository<DropScheduleEnt, Long>{
 	@Modifying(clearAutomatically = true)
 	@Query("update DropScheduleEnt p set p.lockUuid = null where p.lockUuid = :uuid")
 	void removeUuid(String uuid);
+
 	
 }

@@ -26,6 +26,9 @@ public class EmailServiceImpl implements EmailService {
 	@Override
 	public void sendEmail(String to, String subject, String htmlBody) {
 
+		if(to==null || subject == null || htmlBody == null) {
+			return;
+		}
 		try {
 	
 			MimeMessage message = mailSender.createMimeMessage();

@@ -76,7 +76,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 		List<DropScheduleRunEnt> dropRuns = dropScheduleRunRepo.findAll(Example.of(DropScheduleRunEnt.builder().dropRequestId(p.getId()).build()));
 		
 		Date repeatUntilDate = null;
-		DropFrequency frequency = DropFrequency.ONCE;
+		DropFrequency frequency = null;
 		if(!dropRuns.isEmpty()) {
 			
 			Optional<DropScheduleEnt> dropSchedule = dropScheduleRepo.findById(dropRuns.get(0).getDropRequestId());

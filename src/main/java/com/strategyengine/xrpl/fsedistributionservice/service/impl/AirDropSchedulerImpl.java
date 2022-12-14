@@ -29,6 +29,7 @@ import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.service.EmailService;
+import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
 
 import lombok.extern.log4j.Log4j2;
@@ -61,74 +62,93 @@ public class AirDropSchedulerImpl {
 	@Autowired
 	protected EmailService emailService;
 
-	// runs every 5 minutes
-	@Scheduled(fixedDelay = 1000 * 60 * 5)
-	public void checkScheduledDrops() {
+	@Autowired
+	protected ValidationService validationService;
 
+	// runs every 5 minutes
+	@Scheduled(fixedDelay = 1000 * 60 * 5) // @Scheduled(fixedDelay = 1000 * 60 * 5)
+	public void checkScheduledDrops() {
 		String uuid = UUID.randomUUID().toString();
 
-		if (!lockActiveSchedules(uuid)) {
-			return;
+		try {
+
+			if (!lockActiveSchedules(uuid)) {
+				dropScheduleRepo.removeUuid(uuid);
+				return;
+			}
+
+			List<DropScheduleEnt> schedules = dropScheduleRepo.findAll(
+					Example.of(DropScheduleEnt.builder().dropScheduleStatus(DropScheduleStatus.ACTIVE).build()));
+
+			schedules.stream().forEach(s -> handleSchedule(s));
+
+		} finally {
+			dropScheduleRepo.removeUuid(uuid);
 		}
-
-		List<DropScheduleEnt> schedules = dropScheduleRepo
-				.findAll(Example.of(DropScheduleEnt.builder().dropScheduleStatus(DropScheduleStatus.ACTIVE).build()));
-
-		schedules.stream().forEach(s -> handleSchedule(s));
-
-		dropScheduleRepo.removeUuid(uuid);
-
 	}
 
 	private void handleSchedule(DropScheduleEnt sched) {
+		try {
+			// original schedule as saved in drop_request with a status as SCHEDULED
+			Optional<PaymentRequestEnt> scheduledPaymentReq = paymentRequestRepo.findOne(Example.of(PaymentRequestEnt
+					.builder().id(sched.getDropRequestId()).status(DropRequestStatus.SCHEDULED).build()));
 
-		// original schedule as saved in drop_request with a status as SCHEDULED
-		Optional<PaymentRequestEnt> scheduledPaymentReq = paymentRequestRepo.findOne(Example.of(
-				PaymentRequestEnt.builder().id(sched.getDropRequestId()).status(DropRequestStatus.SCHEDULED).build()));
+			if (scheduledPaymentReq.isEmpty()) {
+				log.error(
+						"NEEDS IMMEDIATE ATTENTION:  Schedule exists, but no scheduled payment request.  This should have been created in xrplservice! "
+								+ sched);
+				return;
+			}
 
-		List<DropScheduleRunEnt> scheduleRuns = dropScheduleRunRepo
-				.findAll(Example.of(DropScheduleRunEnt.builder().dropScheduleId(sched.getId()).build()));
+			try {
+				validationService.validateAirdropNotAlreadyQueuedForFromAddress(
+						scheduledPaymentReq.get().getFromClassicAddress());
+				validationService.validateAirdropNotAlreadyQueuedForIssuer(
+						scheduledPaymentReq.get().getTrustlineIssuerClassicAddress());
 
-		if (sched.getRepeatUntilDate().after(new Date())) {
-			markScheduleComplete(sched, scheduledPaymentReq, scheduleRuns);
-			return;
-		}
+			} catch (Exception e) {
+				log.info("Waiting to start scheduled airdrop: " + e.getMessage());
+				return;
+			}
+			List<DropScheduleRunEnt> scheduleRuns = dropScheduleRunRepo
+					.findAll(Example.of(DropScheduleRunEnt.builder().dropScheduleId(sched.getId()).build()));
 
-		// there will always be at least on scheduled run in drop_request since it is
-		// inserted when requested
-		DropScheduleRunEnt latestScheduledRun = getLatestRun(scheduleRuns);
+			if (sched.getRepeatUntilDate().before(new Date())) {
+				markScheduleComplete(sched, scheduledPaymentReq, scheduleRuns);
+				return;
+			}
 
-		if (scheduledPaymentReq.isEmpty()) {
-			log.error(
-					"NEEDS IMMEDIATE ATTENTION:  Schedule exists, but no scheduled payment request.  This should have been created in xrplservice! "
-							+ sched);
-			return;
-		}
+			// there will always be at least on scheduled run in drop_request since it is
+			// inserted when requested
+			DropScheduleRunEnt latestScheduledRun = getLatestRun(scheduleRuns);
 
-		Date schedStartTime = scheduledPaymentReq.get().getStartTime();
+			Date schedStartTime = scheduledPaymentReq.get().getStartTime();
 
-		if (latestScheduledRun == null) {
-			// this scheduled drop has never been run
-			if (schedStartTime.after(now().getTime())) {
+			if (latestScheduledRun == null) {
+				// this scheduled drop has never been run
+				if (schedStartTime.before(now().getTime())) {
+					runSchedule(sched, scheduledPaymentReq.get());
+				}
+				return;
+			}
+
+			Optional<PaymentRequestEnt> latestPaymentReqRun = paymentRequestRepo
+					.findOne(Example.of(PaymentRequestEnt.builder().id(latestScheduledRun.getDropRequestId()).build()));
+
+			if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus())) {
+				// since the last run failed, this schedule is being terminated
+				markScheduleCompleteRejected(sched, latestPaymentReqRun.get());
+				return;
+
+			}
+
+			if (shouldRunDropScheduleNow(schedStartTime, latestPaymentReqRun.get().getCreateDate(),
+					sched.getFrequency())) {
 				runSchedule(sched, scheduledPaymentReq.get());
 			}
-			return;
+		} catch (Exception e) {
+			log.error("Error trying to run scheduled airdrop " + sched, e);
 		}
-
-		Optional<PaymentRequestEnt> latestPaymentReqRun = paymentRequestRepo
-				.findOne(Example.of(PaymentRequestEnt.builder().id(latestScheduledRun.getDropRequestId()).build()));
-
-		if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus())) {
-			// since the last run failed, this schedule is being terminated
-			markScheduleCompleteRejected(sched, latestPaymentReqRun.get());
-			return;
-
-		}
-
-		if (shouldRunDropScheduleNow(schedStartTime, latestPaymentReqRun.get().getCreateDate(), sched.getFrequency())) {
-			runSchedule(sched, scheduledPaymentReq.get());
-		}
-
 	}
 
 	private DropScheduleRunEnt runSchedule(DropScheduleEnt sched, PaymentRequestEnt p) {
@@ -175,8 +195,9 @@ public class AirDropSchedulerImpl {
 			emailService.sendEmail(newPaymentRequest.getContactEmail(),
 					"strategyengine.one Airdrop Scheduled -" + newPaymentRequest.getId(),
 					"An airdrop has been scheduled to begin and can be found here: <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
-							+ newPaymentRequest.getId() + "'>Drop Details</a>.  This was triggered by the following  <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
-									+ sched.getDropRequestId() + "'>Airdrop Schedule</a>");
+							+ newPaymentRequest.getId()
+							+ "'>Drop Details</a>.  This was triggered by the following  <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
+							+ sched.getDropRequestId() + "'>Airdrop Schedule</a>");
 		}
 
 		return dropScheduleRunRepo.save(DropScheduleRunEnt.builder().createDate(new Date())
@@ -202,8 +223,6 @@ public class AirDropSchedulerImpl {
 	protected Date getNextRun(Date schedStartTime, DropFrequency frequency) {
 
 		switch (frequency) {
-		case ONCE:
-			return null;
 		case ANNUALLY:
 			return getClosestTimeToNow(schedStartTime, Calendar.YEAR);
 		case DAILY:
@@ -247,8 +266,8 @@ public class AirDropSchedulerImpl {
 		if (latestPaymentReq.getContactEmail() != null) {
 			emailService.sendEmail(latestPaymentReq.getContactEmail(),
 					"strategyengine.one Airdrop Schedule Terminated -" + latestPaymentReq.getId(),
-					"A <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
-					+ sched.getDropRequestId() + "'>scheduled airdrop</a> has been terminated.  The most recent scheduled airdrop has been rejected.  "
+					"A <a href='https://strategyengine.one/#/airdropdetails?dropRequestId=" + sched.getDropRequestId()
+							+ "'>scheduled airdrop</a> has been terminated.  The most recent scheduled airdrop has been rejected.  "
 							+ "Details for the rejection can be found here: <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
 							+ latestPaymentReq.getId() + "'>Drop Details</a>");
 		}
@@ -266,16 +285,17 @@ public class AirDropSchedulerImpl {
 		}
 
 		StringBuilder sb = new StringBuilder();
-		for(DropScheduleRunEnt run: scheduleRuns) {
+		for (DropScheduleRunEnt run : scheduleRuns) {
 			sb.append("<br><a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
 					+ scheduledPaymentReq.get().getId() + "'>Drop Details</a>");
 		}
-		
+
 		if (scheduledPaymentReq.get().getContactEmail() != null) {
 			emailService.sendEmail(scheduledPaymentReq.get().getContactEmail(),
 					"strategyengine.one Airdrop Schedule Completed",
 					"Your scheduled airdrops have been completed. Schedule details can be found here: <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
-							+ sched.getDropRequestId() + "'>Schedule Details</a> and detailed runs below:"+sb.toString());
+							+ sched.getDropRequestId() + "'>Schedule Details</a> and detailed runs below:"
+							+ sb.toString());
 		}
 
 	}

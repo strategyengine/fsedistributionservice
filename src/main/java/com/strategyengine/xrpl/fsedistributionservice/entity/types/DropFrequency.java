@@ -8,5 +8,5 @@ package com.strategyengine.xrpl.fsedistributionservice.entity.types;
  */
 public enum DropFrequency {
 
-	ONCE, DAILY, WEEKLY, MONTHLY, ANNUALLY
+	DAILY, WEEKLY, MONTHLY, ANNUALLY
 }

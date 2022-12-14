@@ -113,7 +113,7 @@ public class ValidationServiceImpl implements ValidationService {
 				.status(DropRequestStatus.PENDING_REVIEW).trustlineIssuerClassicAddress(issuingAddress).build())));
 		if (!payments.isEmpty()) {
 			throw new BadRequestException(
-					"There is already an airdrop scheduled for the issuing address :" + issuingAddress
+					"There is already an airdrop in progress or pending review for the issuing address :" + issuingAddress
 							+ ".  Concurrent drops from the same issuer or sending address are not permitted.");
 
 		}
@@ -131,7 +131,7 @@ public class ValidationServiceImpl implements ValidationService {
 				PaymentRequestEnt.builder().status(DropRequestStatus.QUEUED).fromClassicAddress(fromAddress).build())));
 
 		if (!payments.isEmpty()) {
-			throw new BadRequestException("There is already an airdrop scheduled for the from address :" + fromAddress
+			throw new BadRequestException("There is already an airdrop in progress for the from address :" + fromAddress
 					+ ".  Concurrent drops from the same issuer or sending address are not permitted.");
 
 		}
