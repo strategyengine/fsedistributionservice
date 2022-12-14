@@ -73,18 +73,15 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 
 	private AirdropStatus convert(PaymentRequestEnt p) {
 		
-		List<DropScheduleRunEnt> dropRuns = dropScheduleRunRepo.findAll(Example.of(DropScheduleRunEnt.builder().dropRequestId(p.getId()).build()));
-		
 		Date repeatUntilDate = null;
 		DropFrequency frequency = null;
-		if(!dropRuns.isEmpty()) {
 			
-			Optional<DropScheduleEnt> dropSchedule = dropScheduleRepo.findById(dropRuns.get(0).getDropRequestId());
+			Optional<DropScheduleEnt> dropSchedule = dropScheduleRepo.findOne(Example.of(DropScheduleEnt.builder().dropRequestId(p.getId()).build()));
 			
 			if(dropSchedule.isPresent()) {
 				repeatUntilDate = dropSchedule.get().getRepeatUntilDate();
 				frequency = dropSchedule.get().getFrequency();
-			}
+
 		}
 		
 		return AirdropStatus.builder().amount(p.getAmount()).createDate(p.getCreateDate())

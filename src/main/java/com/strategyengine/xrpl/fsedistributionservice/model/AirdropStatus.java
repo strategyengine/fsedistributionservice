@@ -89,4 +89,5 @@ public class AirdropStatus implements Serializable {
 	
 	private String nftTaxon;
 	
+	
 }
