@@ -1015,7 +1015,7 @@ public class XrplServiceImpl implements XrplService {
 		List<PaymentRequestEnt> paymentEnts;
 		if (!StringUtils.hasLength(issuingAddress)) {
 			cancelablePayments.addAll(paymentRequestRepo
-					.findAll(Example.of(PaymentRequestEnt.builder().currencyName("XRP").build())).stream()
+					.findAll(Example.of(PaymentRequestEnt.builder().currencyName("XRP").status(DropRequestStatus.SCHEDULED).build())).stream()
 					.filter(s -> s.getTrustlineIssuerClassicAddress() == null).collect(Collectors.toList()));
 
 			paymentEnts = paymentRequestRepo.findActive().stream().filter(p -> "XRP".equals(p.getCurrencyName()))
@@ -1023,7 +1023,7 @@ public class XrplServiceImpl implements XrplService {
 
 		} else {
 			cancelablePayments.addAll(paymentRequestRepo.findAll(
-					Example.of(PaymentRequestEnt.builder().trustlineIssuerClassicAddress(issuingAddress).build())));
+					Example.of(PaymentRequestEnt.builder().trustlineIssuerClassicAddress(issuingAddress).status(DropRequestStatus.SCHEDULED).build())));
 
 			paymentEnts = paymentRequestRepo.findActive().stream()
 					.filter(p -> issuingAddress.equals(p.getTrustlineIssuerClassicAddress()))
