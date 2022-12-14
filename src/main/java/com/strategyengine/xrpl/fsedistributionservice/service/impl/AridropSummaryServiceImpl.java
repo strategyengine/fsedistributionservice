@@ -22,6 +22,7 @@ import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.SummaryResult;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropScheduleStatus;
 import com.strategyengine.xrpl.fsedistributionservice.model.AirdropStatus;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
@@ -47,11 +48,11 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 	@VisibleForTesting
 	@Autowired
 	protected DropScheduleRepo dropScheduleRepo;
-	
+
 	@VisibleForTesting
 	@Autowired
 	protected DropScheduleRunRepo dropScheduleRunRepo;
-	
+
 	@Override
 	public List<AirdropStatus> getAirdrops(String issuingAddress) {
 		List<PaymentRequestEnt> paymentRequests = paymentRequestRepo.findAll(
@@ -60,46 +61,47 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 
 		List<AirdropStatus> drops = new ArrayList<>();
 		drops.addAll(paymentRequests.stream().map(p -> convert(p)).collect(Collectors.toList()));
-		
+
 		List<PaymentRequestEnt> paymentRequestsSnap = paymentRequestRepo.findAll(
 				Example.of(PaymentRequestEnt.builder().snapshotTrustlineIssuerClassicAddress(issuingAddress).build()),
 				Sort.by(Direction.DESC, "createDate"));
-		
-		drops.addAll(paymentRequestsSnap.stream().filter(p -> !paymentRequests.contains(p)).map(p -> convert(p)).collect(Collectors.toList()));
-		
+
+		drops.addAll(paymentRequestsSnap.stream().filter(p -> !paymentRequests.contains(p)).map(p -> convert(p))
+				.collect(Collectors.toList()));
+
 		return drops;
 
 	}
 
 	private AirdropStatus convert(PaymentRequestEnt p) {
-		
+
 		Date repeatUntilDate = null;
 		DropFrequency frequency = null;
-			
-			Optional<DropScheduleEnt> dropSchedule = dropScheduleRepo.findOne(Example.of(DropScheduleEnt.builder().dropRequestId(p.getId()).build()));
-			
-			if(dropSchedule.isPresent()) {
-				repeatUntilDate = dropSchedule.get().getRepeatUntilDate();
-				frequency = dropSchedule.get().getFrequency();
+		DropScheduleStatus scheduleStatus = null;
+
+		Optional<DropScheduleEnt> dropSchedule = dropScheduleRepo
+				.findOne(Example.of(DropScheduleEnt.builder().dropRequestId(p.getId()).build()));
+
+		if (dropSchedule.isPresent()) {
+			scheduleStatus = dropSchedule.get().getDropScheduleStatus();
+			repeatUntilDate = dropSchedule.get().getRepeatUntilDate();
+			frequency = dropSchedule.get().getFrequency();
 
 		}
-		
+
 		return AirdropStatus.builder().amount(p.getAmount()).createDate(p.getCreateDate())
 				.currencyName(p.getCurrencyName()).currencyNameForProcess(p.getCurrencyNameForProcess())
 				.dropType(p.getDropType()).failReason(p.getFailReason()).fromClassicAddress(p.getFromClassicAddress())
 				.id(p.getId()).maximumTrustlines(p.getMaximumTrustlines()).newTrustlinesOnly(p.getNewTrustlinesOnly())
-				.useBlacklist(p.getUseBlacklist())
-				.status(p.getStatus()).trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-				.paymentType(p.getPaymentType())
+				.useBlacklist(p.getUseBlacklist()).status(p.getStatus())
+				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).paymentType(p.getPaymentType())
 				.minBalance(p.getMinBalance()).maxBalance(p.getMaxBalance())
 				.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 				.snapshotCurrencyName(p.getSnapshotCurrencyName())
 				.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).updateDate(p.getUpdateDate())
-				.nftIssuingAddress(p.getNftIssuerAddress())
-				.startTime(p.getStartTime())
-				.frequency(frequency)
-				.repeatUntilDate(repeatUntilDate)
-				.nftTaxon(String.valueOf(p.getNftTaxon())).build();
+				.nftIssuingAddress(p.getNftIssuerAddress()).startTime(p.getStartTime()).frequency(frequency)
+				.scheduleStatus(scheduleStatus)
+				.repeatUntilDate(repeatUntilDate).nftTaxon(String.valueOf(p.getNftTaxon())).build();
 	}
 
 	@Override
@@ -121,10 +123,8 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 		long totalBlacklisted = recipients.stream().filter(r -> "blacklistedFail".equals(r.getCode())).count();
 		status.setResults(recipients.stream().filter(r -> !"blacklistedFail".equals(r.getCode()))
 				.map(r -> FsePaymentResult.builder().id(r.getId()).status(r.getStatus()).classicAddress(r.getAddress())
-						.reason(r.getFailReason()).responseCode(r.getCode())
-						.paymentAmount(r.getPayAmount()).snapshotBalance(r.getSnapshotBalance())
-						.nftOwned(r.getOwnedNftId())
-						.build())
+						.reason(r.getFailReason()).responseCode(r.getCode()).paymentAmount(r.getPayAmount())
+						.snapshotBalance(r.getSnapshotBalance()).nftOwned(r.getOwnedNftId()).build())
 
 				.collect(Collectors.toList()));
 
@@ -137,7 +137,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 	@Override
 	public List<AirdropStatus> getIncompleteAirdrops() {
 		List<PaymentRequestEnt> incomplete = paymentRequestRepo.findAll(
-				
+
 				Example.of(PaymentRequestEnt.builder().status(DropRequestStatus.IN_PROGRESS).build()),
 				Sort.by("createDate"));
 		incomplete.addAll(paymentRequestRepo.findAll(
@@ -147,23 +147,23 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 		incomplete.addAll(paymentRequestRepo.findAll(
 				Example.of(PaymentRequestEnt.builder().status(DropRequestStatus.POPULATING_ADDRESSES).build()),
 				Sort.by("createDate")));
-		
+
 		incomplete.addAll(paymentRequestRepo.findAll(
 				Example.of(PaymentRequestEnt.builder().status(DropRequestStatus.PENDING_REVIEW).build()),
-				Sort.by("createDate")));		
-		
+				Sort.by("createDate")));
+
 		return incomplete.stream().map(p -> convert(p)).collect(Collectors.toList());
 	}
-	
+
 	@Override
 	public List<AirdropStatus> getScheduledAirdrops() {
 
 		List<PaymentRequestEnt> incomplete = paymentRequestRepo.findAll(
-				
+
 				Example.of(PaymentRequestEnt.builder().status(DropRequestStatus.SCHEDULED).build()),
 				Sort.by("createDate"));
-		
-		return incomplete.stream().map(p -> convert(p)).collect(Collectors.toList());
+
+		return incomplete.stream().map(p -> convert(p)).filter(p -> p!=null).collect(Collectors.toList());
 	}
 
 	@Override
@@ -171,13 +171,15 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 
 		Calendar c = Calendar.getInstance();
 		c.add(Calendar.DATE, -30);
-		List<PaymentRequestEnt> drops = paymentRequestRepo.findByStatusAfterDate(DropRequestStatus.COMPLETE, c.getTime());
+		List<PaymentRequestEnt> drops = paymentRequestRepo.findByStatusAfterDate(DropRequestStatus.COMPLETE,
+				c.getTime());
 
-		
-		//TODO improve this query 
-		final List<SummaryResult> summaries = dropRecipientRepo.countsByPaymentId(drops.stream().map(d -> d.getId()).collect(Collectors.toList()));
-		
-		List<AirdropStatus> status = drops.stream().map(p -> convertWithTotals(p, summaries)).collect(Collectors.toList());
+		// TODO improve this query
+		final List<SummaryResult> summaries = dropRecipientRepo
+				.countsByPaymentId(drops.stream().map(d -> d.getId()).collect(Collectors.toList()));
+
+		List<AirdropStatus> status = drops.stream().map(p -> convertWithTotals(p, summaries))
+				.collect(Collectors.toList());
 
 		return status;
 	}
@@ -185,13 +187,11 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 	private AirdropStatus convertWithTotals(PaymentRequestEnt p, List<SummaryResult> summaries) {
 
 		AirdropStatus status = convert(p);
-		status.setTotalRecipients(summaries.stream().filter(s -> s.getId().equals(status.getId())).map(s -> s.getCount()).collect(Collectors.summingLong(Long::longValue))
-				);
+		status.setTotalRecipients(summaries.stream().filter(s -> s.getId().equals(status.getId()))
+				.map(s -> s.getCount()).collect(Collectors.summingLong(Long::longValue)));
 
 		return status;
 
 	}
-
-
 
 }

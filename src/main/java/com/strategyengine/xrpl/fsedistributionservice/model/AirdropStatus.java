@@ -7,6 +7,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropScheduleStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropType;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
 
@@ -88,6 +89,8 @@ public class AirdropStatus implements Serializable {
 	private String nftIssuingAddress;
 	
 	private String nftTaxon;
+	
+	private DropScheduleStatus scheduleStatus;
 	
 	
 }

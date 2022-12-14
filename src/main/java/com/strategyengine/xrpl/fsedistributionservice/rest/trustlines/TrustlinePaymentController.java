@@ -104,7 +104,7 @@ public class TrustlinePaymentController {
 		// only the private key and issuing address are populated
 
 		// DO NOT LOG THE PRIVATE KEY!!
-		log.info("payment/trustlines/cancel");
+		log.info("payment/trustlines/cancel " + paymentRequest.getTrustlineIssuerClassicAddress());
 
 		FsePaymentRequest result = xrplService.cancelJob(paymentRequest.getFromPrivateKey(),
 				paymentRequest.getTrustlineIssuerClassicAddress(), cancelScheduled == null ? false : cancelScheduled);

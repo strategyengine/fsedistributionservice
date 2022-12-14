@@ -430,10 +430,10 @@ public class XrplServiceImpl implements XrplService {
 					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.PENDING_REVIEW).build());
 		}
 
-		return saveSchedule(savedPaymentRequest, paymentRequestPre.getFrequency(), paymentRequestPre.getRepeatUntilDate());
+		return saveSchedule(savedPaymentRequest, paymentRequestPre.getFrequency(),
+				paymentRequestPre.getRepeatUntilDate());
 
 	}
-
 
 	private void logRecipientCountDiff(FsePaymentRequest paymentRequestPre, Set<DropRecipientEnt> recipients,
 			List<DropRecipientEnt> savedRecipients, Long dropRequestId) {
@@ -606,7 +606,7 @@ public class XrplServiceImpl implements XrplService {
 
 		PaymentRequestEnt savedPayment = saveSchedule(paymentRequestEnt, paymentRequestPre.getFrequency(),
 				paymentRequestPre.getRepeatUntilDate());
-				
+
 		executorPopulateAddresses.execute(
 				() -> sendFsePaymentToTrustlinesThread(savedPayment, retryFailedAddresses, p, paymentRequestPre));
 
@@ -614,16 +614,16 @@ public class XrplServiceImpl implements XrplService {
 
 	}
 
-	private PaymentRequestEnt saveSchedule(PaymentRequestEnt paymentRequestEnt, DropFrequency frequency, Date repeatUntilDate) {
+	private PaymentRequestEnt saveSchedule(PaymentRequestEnt paymentRequestEnt, DropFrequency frequency,
+			Date repeatUntilDate) {
 
-		if (paymentRequestEnt==null || paymentRequestEnt.getStartTime() == null || frequency == null) {
+		if (paymentRequestEnt == null || paymentRequestEnt.getStartTime() == null || frequency == null) {
 			return paymentRequestEnt;
 		}
 
-		dropScheduleRepo
-				.save(DropScheduleEnt.builder().createDate(new Date()).dropRequestId(paymentRequestEnt.getId())
-						.dropScheduleStatus(DropScheduleStatus.ACTIVE).frequency(frequency)
-						.repeatUntilDate(repeatUntilDate).build());
+		dropScheduleRepo.save(DropScheduleEnt.builder().createDate(new Date()).dropRequestId(paymentRequestEnt.getId())
+				.dropScheduleStatus(DropScheduleStatus.ACTIVE).frequency(frequency).repeatUntilDate(repeatUntilDate)
+				.build());
 
 		emailService.sendEmail(paymentRequestEnt.getContactEmail(), "Airdrop Scheduled",
 				"Airdrop has been scheduled.  <a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
@@ -995,8 +995,8 @@ public class XrplServiceImpl implements XrplService {
 
 		cancelDropRequestRepo.save(CancelDropRequestEnt.builder().dropRequestId(p.getId()).createDate(now()).build());
 
-		if ((cancelScheduled&&DropRequestStatus.SCHEDULED.equals(p.getStatus()))||
-				DropRequestStatus.POPULATING_ADDRESSES.equals(p.getStatus())
+		if ((cancelScheduled && DropRequestStatus.SCHEDULED.equals(p.getStatus()))
+				|| DropRequestStatus.POPULATING_ADDRESSES.equals(p.getStatus())
 				|| DropRequestStatus.PENDING_REVIEW.equals(p.getStatus())
 				|| DropRequestStatus.QUEUED.equals(p.getStatus())) {
 			paymentRequestRepo
@@ -1010,23 +1010,32 @@ public class XrplServiceImpl implements XrplService {
 	@Override
 	public FsePaymentRequest cancelJob(String privateKey, String issuingAddress, boolean cancelScheduled) {
 
+		List<PaymentRequestEnt> cancelablePayments = new ArrayList<>();
+
 		List<PaymentRequestEnt> paymentEnts;
 		if (!StringUtils.hasLength(issuingAddress)) {
+			cancelablePayments.addAll(paymentRequestRepo
+					.findAll(Example.of(PaymentRequestEnt.builder().currencyName("XRP").build())).stream()
+					.filter(s -> s.getTrustlineIssuerClassicAddress() == null).collect(Collectors.toList()));
+
 			paymentEnts = paymentRequestRepo.findActive().stream().filter(p -> "XRP".equals(p.getCurrencyName()))
 					.collect(Collectors.toList());
+
 		} else {
+			cancelablePayments.addAll(paymentRequestRepo.findAll(
+					Example.of(PaymentRequestEnt.builder().trustlineIssuerClassicAddress(issuingAddress).build())));
+
 			paymentEnts = paymentRequestRepo.findActive().stream()
 					.filter(p -> issuingAddress.equals(p.getTrustlineIssuerClassicAddress()))
 					.collect(Collectors.toList());
 		}
-		List<PaymentRequestEnt> cancelablePayments  = paymentEnts.stream()
-					.filter(p -> p.getStatus() == DropRequestStatus.PENDING_REVIEW
-							|| p.getStatus() == DropRequestStatus.IN_PROGRESS || p.getStatus() == DropRequestStatus.QUEUED
-							|| p.getStatus() == DropRequestStatus.POPULATING_ADDRESSES
-							|| (cancelScheduled && p.getStatus()== DropRequestStatus.SCHEDULED) )
-					.filter(p -> p.getFromPrivateKey().equals(privateKey)).collect(Collectors.toList());
+		List<PaymentRequestEnt> cancelableActive = paymentEnts.stream()
+				.filter(p -> p.getStatus() == DropRequestStatus.PENDING_REVIEW
+						|| p.getStatus() == DropRequestStatus.IN_PROGRESS || p.getStatus() == DropRequestStatus.QUEUED
+						|| p.getStatus() == DropRequestStatus.POPULATING_ADDRESSES)
+				.filter(p -> p.getFromPrivateKey().equals(privateKey)).collect(Collectors.toList());
 
-
+		cancelablePayments.addAll(cancelableActive);
 
 		if (!cancelablePayments.isEmpty()) {
 
