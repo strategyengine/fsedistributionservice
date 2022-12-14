@@ -22,13 +22,13 @@ public interface XrplService {
 
 	PaymentRequestEnt sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest paymentRequest, List<DropRecipientEnt> retryFailedAddresses);
 
-	FsePaymentRequest cancelJob(String privateKey, String issuingAddress, Boolean cancelScheduled);
-
 	List<FseTrustLine> getTrustLines(String classicAddress, FseSort sort);
 
 	void approveAirdrop(Long paymentRequestId, String privKey);
 
 	List<FseTrustLine> fetchAllTrustlines(FsePaymentTrustlinesRequest paymentRequestPre);
+
+	FsePaymentRequest cancelJob(String privateKey, String issuingAddress, boolean cancelScheduled);
 
 
 }

@@ -989,13 +989,14 @@ public class XrplServiceImpl implements XrplService {
 		return true;
 	}
 
-	private PaymentRequestEnt cancelJob(PaymentRequestEnt p) {
+	private PaymentRequestEnt cancelJob(PaymentRequestEnt p, Boolean cancelScheduled) {
 
 		log.info("Cancel requested for job " + p);
 
 		cancelDropRequestRepo.save(CancelDropRequestEnt.builder().dropRequestId(p.getId()).createDate(now()).build());
 
-		if (DropRequestStatus.POPULATING_ADDRESSES.equals(p.getStatus())
+		if ((cancelScheduled&&DropRequestStatus.SCHEDULED.equals(p.getStatus()))||
+				DropRequestStatus.POPULATING_ADDRESSES.equals(p.getStatus())
 				|| DropRequestStatus.PENDING_REVIEW.equals(p.getStatus())
 				|| DropRequestStatus.QUEUED.equals(p.getStatus())) {
 			paymentRequestRepo
@@ -1007,7 +1008,7 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public FsePaymentRequest cancelJob(String privateKey, String issuingAddress, Boolean cancelScheduled) {
+	public FsePaymentRequest cancelJob(String privateKey, String issuingAddress, boolean cancelScheduled) {
 
 		List<PaymentRequestEnt> paymentEnts;
 		if (!StringUtils.hasLength(issuingAddress)) {
@@ -1018,26 +1019,18 @@ public class XrplServiceImpl implements XrplService {
 					.filter(p -> issuingAddress.equals(p.getTrustlineIssuerClassicAddress()))
 					.collect(Collectors.toList());
 		}
-		List<PaymentRequestEnt> cancelablePayments = null;
-		if(cancelScheduled) {
-			cancelablePayments = paymentEnts.stream()
-					.filter(p -> p.getStatus() == DropRequestStatus.PENDING_REVIEW
-							|| p.getStatus() == DropRequestStatus.IN_PROGRESS || p.getStatus() == DropRequestStatus.QUEUED
-							|| p.getStatus() == DropRequestStatus.POPULATING_ADDRESSES)
-					.filter(p -> p.getFromPrivateKey().equals(privateKey)).collect(Collectors.toList());
-		}else {
-			cancelablePayments = paymentEnts.stream()
+		List<PaymentRequestEnt> cancelablePayments  = paymentEnts.stream()
 					.filter(p -> p.getStatus() == DropRequestStatus.PENDING_REVIEW
 							|| p.getStatus() == DropRequestStatus.IN_PROGRESS || p.getStatus() == DropRequestStatus.QUEUED
 							|| p.getStatus() == DropRequestStatus.POPULATING_ADDRESSES
-							|| p.getStatus()== DropRequestStatus.SCHEDULED )
+							|| (cancelScheduled && p.getStatus()== DropRequestStatus.SCHEDULED) )
 					.filter(p -> p.getFromPrivateKey().equals(privateKey)).collect(Collectors.toList());
-		}
+
 
 
 		if (!cancelablePayments.isEmpty()) {
 
-			List<PaymentRequestEnt> cancelled = cancelablePayments.stream().map(p -> cancelJob(p))
+			List<PaymentRequestEnt> cancelled = cancelablePayments.stream().map(p -> cancelJob(p, cancelScheduled))
 					.collect(Collectors.toList());
 
 			PaymentRequestEnt p = cancelled.get(0);

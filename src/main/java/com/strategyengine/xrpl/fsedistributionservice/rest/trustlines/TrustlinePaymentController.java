@@ -42,7 +42,6 @@ public class TrustlinePaymentController {
 	@VisibleForTesting
 	@Autowired
 	protected TransactionHistoryService transactionHistoryService;
-	
 
 	@VisibleForTesting
 	@Autowired
@@ -52,17 +51,16 @@ public class TrustlinePaymentController {
 	@Autowired
 	protected PaymentsChangeService paymentsChangeService;
 
-
 	@VisibleForTesting
 	@Autowired
 	protected RetryFailedPaymentsService retryFailedPaymentsService;
-	
+
 	@ApiOperation(value = "Distributes tokens to a set of recipient addresses")
 	@RequestMapping(value = "/api/payment", method = RequestMethod.POST)
 	public ResponseEntity<Void> payment(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
 
-		if(!configService.isAirdropEnabled()) {
+		if (!configService.isAirdropEnabled()) {
 			throw new BadRequestException("Airdrops currently disabled");
 		}
 		log.info(
@@ -75,7 +73,7 @@ public class TrustlinePaymentController {
 				|| ObjectUtils.isEmpty(paymentRequest.getDestinationTag())) {
 			paymentRequest.setDestinationTag(null);
 		}
-		
+
 		xrplService.sendFsePayment(paymentRequest);
 		return ResponseEntity.ok().build();
 	}
@@ -84,15 +82,13 @@ public class TrustlinePaymentController {
 	@RequestMapping(value = "/api/payment/trustlines", method = RequestMethod.POST)
 	public ResponseEntity<Void> paymentTrustlines(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentTrustlinesRequest paymentRequest) {
-		
-		if(!configService.isAirdropEnabled()) {
+
+		if (!configService.isAirdropEnabled()) {
 			throw new BadRequestException("Airdrops currently disabled");
 		}
-		
+
 		// DO NOT LOG THE PRIVATE KEY!!
-		log.info(
-				"payment/trustlines: {}",
-				paymentRequest);
+		log.info("payment/trustlines: {}", paymentRequest);
 
 		xrplService.sendFsePaymentToTrustlines(paymentRequest, null);
 
@@ -103,52 +99,49 @@ public class TrustlinePaymentController {
 	@RequestMapping(value = "/api/payment/trustlines/cancel", method = RequestMethod.POST)
 	public ResponseEntity<FsePaymentRequest> paymentTrustlines(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest,
-			@ApiParam(value = "If true, will cancel scheduled jobs as well", required = true) @RequestParam(value="cancelScheduled") Boolean cancelScheduled) {
-		
-		//only the private key and issuing address are populated
-		
-		// DO NOT LOG THE PRIVATE KEY!!
-		log.info(
-				"payment/trustlines/cancel");
+			@ApiParam(value = "If true, will cancel scheduled jobs as well", required = true) @RequestParam(value = "cancelScheduled") Boolean cancelScheduled) {
 
-		FsePaymentRequest result = xrplService.cancelJob(paymentRequest.getFromPrivateKey(), paymentRequest.getTrustlineIssuerClassicAddress(), cancelScheduled);
-		
+		// only the private key and issuing address are populated
+
+		// DO NOT LOG THE PRIVATE KEY!!
+		log.info("payment/trustlines/cancel");
+
+		FsePaymentRequest result = xrplService.cancelJob(paymentRequest.getFromPrivateKey(),
+				paymentRequest.getTrustlineIssuerClassicAddress(), cancelScheduled == null ? false : cancelScheduled);
+
 		return ResponseEntity.of(Optional.ofNullable(result));
 
 	}
-	
+
 	@ApiOperation(value = "Distributes tokens to a set of recipient addresses")
 	@RequestMapping(value = "/api/payment/retryfailed", method = RequestMethod.POST)
 	public ResponseEntity<FsePaymentResult> retryFailedPayment(
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody RetryPaymentRequest retryPaymentRequest) {
 
-		if(!configService.isAirdropEnabled()) {
+		if (!configService.isAirdropEnabled()) {
 			throw new BadRequestException("Airdrops currently disabled");
 		}
-		log.info(
-				"payment/trustlines/retryfailed: dropRequestId {}",
-				retryPaymentRequest);
+		log.info("payment/trustlines/retryfailed: dropRequestId {}", retryPaymentRequest);
 
-		
 		FsePaymentResult r = retryFailedPaymentsService.retryFailedPayments(retryPaymentRequest);
 		return ResponseEntity.ok(r);
 	}
-	
+
 	@ApiOperation(value = "Change amounts to pay to specific addresses")
 	@RequestMapping(value = "/api/payment/change", method = RequestMethod.POST)
 	public void changePaymentAmounts(
 			@ApiParam(value = "Payments Change", required = true) @RequestBody PaymentsChange paymentsChange) {
 
-			paymentsChangeService.updatePaymentAmounts(paymentsChange);
+		paymentsChangeService.updatePaymentAmounts(paymentsChange);
 	}
-	
+
 	@ApiOperation(value = "Change amounts to pay to specific addresses")
 	@RequestMapping(value = "/api/payment/delete/{dropRecipientId}", method = RequestMethod.POST)
 	public void deletePayment(
 			@ApiParam(value = "Drop recipient id", required = true) @PathVariable("dropRecipientId") Long dropRecipientId,
 			@ApiParam(value = "Payments Delete", required = true) @RequestBody PaymentsChange paymentsChange) {
 
-			paymentsChangeService.removeRecipient(dropRecipientId, paymentsChange.getPrivateKey());
+		paymentsChangeService.removeRecipient(dropRecipientId, paymentsChange.getPrivateKey());
 	}
 
 }
