@@ -209,7 +209,7 @@ public class AirDropSchedulerImpl {
 		// a drop should have occurred after this date
 		Date lastTimeDropShouldHaveRun = getNextRun(schedStartTime, frequency);
 
-		if (lastTimeDropShouldHaveRun != null && lastTimeDropShouldHaveRun.after(lastPaymentDate)
+		if (lastTimeDropShouldHaveRun != null && (lastPaymentDate==null || lastTimeDropShouldHaveRun.after(lastPaymentDate))
 				&& lastTimeDropShouldHaveRun.before(now().getTime())) {
 
 			return true;
@@ -262,7 +262,12 @@ public class AirDropSchedulerImpl {
 
 		DropScheduleEnt schedComplete = dropScheduleRepo
 				.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
-
+		
+		Optional<PaymentRequestEnt> originalPaymentSched = paymentRequestRepo.findById(sched.getDropRequestId());
+		
+		if(originalPaymentSched.isPresent()) {
+			paymentRequestRepo.save(originalPaymentSched.get().toBuilder().status(DropRequestStatus.COMPLETE).build());
+		}
 		if (latestPaymentReq.getContactEmail() != null) {
 			emailService.sendEmail(latestPaymentReq.getContactEmail(),
 					"strategyengine.one Airdrop Schedule Terminated -" + latestPaymentReq.getId(),
