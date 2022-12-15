@@ -65,6 +65,8 @@ public class AirDropRunnerImpl {
 	
 	public static String ADMIN_LOCK_UUID = "RUN_ADMIN";
 
+	public static final String REASON_CANCEL_BY_USER = "Job Cancelled by user";
+	
 	// DO NOT MARK THIS METHOD TRANSACTIONAL we need other processes to see the
 	// lock_uuid
 	// fixedDelay millis - check every minute for a drop
@@ -145,7 +147,7 @@ public class AirDropRunnerImpl {
 		// check if job canceled
 		if (cancelDropRequestRepo.exists(Example.of(CancelDropRequestEnt.builder().dropRequestId(p.getId()).build()))) {
 			try {
-				p.setFailReason("Job Cancelled by user");
+				p.setFailReason(REASON_CANCEL_BY_USER);
 				p.setStatus(DropRequestStatus.REJECTED);
 				p.setFromPrivateKey(null);
 				p.setFromSigningPublicKey(null);
