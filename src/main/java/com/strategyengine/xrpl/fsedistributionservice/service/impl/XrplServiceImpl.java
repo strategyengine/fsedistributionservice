@@ -408,7 +408,7 @@ public class XrplServiceImpl implements XrplService {
 		if (cancelDropRequestRepo
 				.exists(Example.of(CancelDropRequestEnt.builder().dropRequestId(paymentRequestEnt.getId()).build()))) {
 			try {
-				paymentRequestEnt.setFailReason("Job Cancelled");
+				paymentRequestEnt.setFailReason(AirDropRunnerImpl.REASON_CANCEL_BY_USER);
 				paymentRequestEnt.setStatus(DropRequestStatus.REJECTED);
 				paymentRequestEnt.setFromPrivateKey(null);
 				paymentRequestEnt.setFromSigningPublicKey(null);
@@ -1000,7 +1000,7 @@ public class XrplServiceImpl implements XrplService {
 				|| DropRequestStatus.PENDING_REVIEW.equals(p.getStatus())
 				|| DropRequestStatus.QUEUED.equals(p.getStatus())) {
 			paymentRequestRepo
-					.save(p.toBuilder().status(DropRequestStatus.REJECTED).failReason("Canceled by user").build());
+					.save(p.toBuilder().status(DropRequestStatus.REJECTED).failReason(AirDropRunnerImpl.REASON_CANCEL_BY_USER).build());
 		}
 
 		return p;

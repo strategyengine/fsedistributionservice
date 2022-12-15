@@ -119,7 +119,7 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 			if (cancelDropRequestRepo.exists(
 					Example.of(CancelDropRequestEnt.builder().dropRequestId(paymentRequestInitial.getId()).build()))) {
 				try {
-					paymentRequestInitial.setFailReason("Job Cancelled");
+					paymentRequestInitial.setFailReason(AirDropRunnerImpl.REASON_CANCEL_BY_USER);
 					paymentRequestInitial.setStatus(DropRequestStatus.REJECTED);
 					paymentRequestInitial.setFromPrivateKey(null);
 					paymentRequestInitial.setFromSigningPublicKey(null);

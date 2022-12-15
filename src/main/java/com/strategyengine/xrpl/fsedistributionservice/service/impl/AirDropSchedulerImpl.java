@@ -135,7 +135,8 @@ public class AirDropSchedulerImpl {
 			Optional<PaymentRequestEnt> latestPaymentReqRun = paymentRequestRepo
 					.findOne(Example.of(PaymentRequestEnt.builder().id(latestScheduledRun.getDropRequestId()).build()));
 
-			if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus())) {
+			if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus()) && 
+					!AirDropRunnerImpl.REASON_CANCEL_BY_USER.equals(latestPaymentReqRun.get().getFailReason())) {
 				// since the last run failed, this schedule is being terminated
 				markScheduleCompleteRejected(sched, latestPaymentReqRun.get());
 				return;
