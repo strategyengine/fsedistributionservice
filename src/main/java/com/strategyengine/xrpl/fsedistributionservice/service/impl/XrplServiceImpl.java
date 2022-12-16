@@ -424,7 +424,7 @@ public class XrplServiceImpl implements XrplService {
 		if (PaymentType.PROPORTIONAL.equals(paymentRequestEnt.getPaymentType())) {
 			savedPaymentRequest = paymentRequestRepo
 					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.POPULATING_ADDRESSES).build());
-			executorPopulateAddresses.execute(() -> updateRecipientAmountThread(savedPaymentRequest, savedRecipients));
+			executorPopulateAddresses.execute(() -> updateRecipientAmountThread(savedPaymentRequest, savedRecipients, paymentRequestPre));
 		} else {
 			savedPaymentRequest = paymentRequestRepo
 					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.PENDING_REVIEW).build());
@@ -455,7 +455,7 @@ public class XrplServiceImpl implements XrplService {
 
 	}
 
-	private void updateRecipientAmountThread(PaymentRequestEnt paymentReq, List<DropRecipientEnt> savedRecipients) {
+	private void updateRecipientAmountThread(PaymentRequestEnt paymentReq, List<DropRecipientEnt> savedRecipients, FsePaymentRequest paymentRequestPre) {
 
 		String issuingAddressForProportion = StringUtils
 				.hasLength(paymentReq.getSnapshotTrustlineIssuerClassicAddress())
@@ -476,7 +476,7 @@ public class XrplServiceImpl implements XrplService {
 		savedRecipients.stream().forEach(r -> updatePaymentAmount(r, trustlines, paymentReq,
 				issuingAddressForProportion, currencyForProportion));
 
-		if (paymentReq.getStartTime() != null) {
+		if (paymentRequestPre.getFrequency() != null) {
 			paymentReq.setStatus(DropRequestStatus.SCHEDULED);
 		} else {
 			paymentReq.setStatus(DropRequestStatus.PENDING_REVIEW);
@@ -617,7 +617,7 @@ public class XrplServiceImpl implements XrplService {
 	private PaymentRequestEnt saveSchedule(PaymentRequestEnt paymentRequestEnt, DropFrequency frequency,
 			Date repeatUntilDate) {
 
-		if (paymentRequestEnt == null || paymentRequestEnt.getStartTime() == null || frequency == null) {
+		if ( frequency == null) {
 			return paymentRequestEnt;
 		}
 

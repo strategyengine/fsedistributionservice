@@ -64,10 +64,11 @@ public class TrustlinePaymentController {
 			throw new BadRequestException("Airdrops currently disabled");
 		}
 		log.info(
-				"api/payment: specific addresses - fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} agreeFee:{} addressesToPay:{}",
+				"api/payment: specific addresses - fromClassicAddress:{} fromSigningPublicKey:{} amount:{} issuerClassicAddress:{} currency:{} agreeFee:{} addressesToPay:{} startTime:{} frequency:{} runUntil:{}",
 				paymentRequest.getFromClassicAddress(), paymentRequest.getFromSigningPublicKey(),
 				paymentRequest.getAmount(), paymentRequest.getTrustlineIssuerClassicAddress(),
-				paymentRequest.getCurrencyName(), paymentRequest.isAgreeFee(), paymentRequest.getToClassicAddresses());
+				paymentRequest.getCurrencyName(), paymentRequest.isAgreeFee(), paymentRequest.getToClassicAddresses(),
+				paymentRequest.getStartTime(), paymentRequest.getFrequency(), paymentRequest.getRepeatUntilDate());
 
 		if ("String".equals(paymentRequest.getDestinationTag())
 				|| ObjectUtils.isEmpty(paymentRequest.getDestinationTag())) {
