@@ -92,5 +92,7 @@ public class AirdropStatus implements Serializable {
 	
 	private DropScheduleStatus scheduleStatus;
 	
+	private Long fromScheduleId;
+	
 	
 }

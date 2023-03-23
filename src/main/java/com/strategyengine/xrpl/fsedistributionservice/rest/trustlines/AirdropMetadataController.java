@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.strategyengine.xrpl.fsedistributionservice.FseConstants;
 import com.strategyengine.xrpl.fsedistributionservice.model.AirdropStatus;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
@@ -77,7 +76,7 @@ public class AirdropMetadataController {
 			@ApiParam(value = "Airdrop request id", required = true) @PathVariable("id") Long paymentRequestId,
 			@ApiParam(value = "Payment Details: Click Model under Data Type for details", required = true) @RequestBody FsePaymentRequest paymentRequest) {
 		
-		 xrplService.approveAirdrop(paymentRequestId, paymentRequest.getFromPrivateKey());
+		 xrplService.approveAirdrop(paymentRequestId, paymentRequest.getFromPrivateKey(), paymentRequest.isAutoApprove());
 	}	
 		
 	

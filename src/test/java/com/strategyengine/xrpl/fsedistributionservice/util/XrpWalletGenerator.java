@@ -28,29 +28,13 @@ public class XrpWalletGenerator {
 		Wallet wallet = null;
 		String seed = null;
 
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 100000000; i++) {
 			seed = DefaultKeyPairService.getInstance().generateSeed();
 			wallet = new XrpWalletGenerator().generateWallet(seed);
 			String add = wallet.classicAddress().value();
 	
-			if(add.toUpperCase().startsWith("REAPER")) {
-				final Address classicAddress = wallet.classicAddress();
 
-				final XAddress xAddress = wallet.xAddress();
-				final String privateKeyEncoded = wallet.privateKey().get();
-				PrivateKey privateKeyFrom16Encoded = PrivateKey.fromBase16EncodedPrivateKey(wallet.privateKey().get());
-
-				String pkeyFromUnsignedByteArray = unsignedByteArrayToString(privateKeyFrom16Encoded.value().toByteArray());
-				
-				System.out.print("Almost made it! " + wallet.classicAddress().value() +  " " +  wallet);
-				System.out.println("privateKey Base58Encoded: " + privateKeyFrom16Encoded.base58Encoded());
-				System.out.println("Seed to regenerate: " + seed);
-			
-			}
-			if (add.startsWith("reaper")||add.endsWith("CASINO")||add.endsWith("SCHMECKLES")||add.endsWith("STRATEGY")
-					||add.startsWith("rEAPER")||add.endsWith("XPUNK")||add.endsWith("CORE")
-					||add.startsWith("3DAPES")||add.endsWith("XOGE")||add.endsWith("XTREME")||add.endsWith("XTOADZ")
-					||add.startsWith("TRSRY")||add.endsWith("JUNK")||add.endsWith("HOG")||add.endsWith("XRDOGE")) {
+			if (add.toLowerCase().endsWith("stitches")||add.endsWith("NFT")||add.endsWith("NFTst")) {
 				final Address classicAddress = wallet.classicAddress();
 
 				final XAddress xAddress = wallet.xAddress();

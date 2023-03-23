@@ -89,6 +89,20 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 
 		}
 
+		List<DropScheduleRunEnt> scheduledDropRuns = dropScheduleRunRepo
+				.findAll(Example.of(DropScheduleRunEnt.builder().dropRequestId(p.getId()).build()));
+
+		Long scheduleId = null;
+		if (!scheduledDropRuns.isEmpty()) {
+
+			List<DropScheduleEnt> sched = dropScheduleRepo.findAll(Example
+					.of(DropScheduleEnt.builder().id(scheduledDropRuns.get(0).getDropScheduleId()).build()));
+			if (!sched.isEmpty()) {
+				scheduleId = sched.get(0).getDropRequestId();
+			}
+		}
+
+		
 		return AirdropStatus.builder().amount(p.getAmount()).createDate(p.getCreateDate())
 				.currencyName(p.getCurrencyName()).currencyNameForProcess(p.getCurrencyNameForProcess())
 				.dropType(p.getDropType()).failReason(p.getFailReason()).fromClassicAddress(p.getFromClassicAddress())
@@ -100,7 +114,7 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 				.snapshotCurrencyName(p.getSnapshotCurrencyName())
 				.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).updateDate(p.getUpdateDate())
 				.nftIssuingAddress(p.getNftIssuerAddress()).startTime(p.getStartTime()).frequency(frequency)
-				.scheduleStatus(scheduleStatus)
+				.scheduleStatus(scheduleStatus).fromScheduleId(scheduleId)
 				.repeatUntilDate(repeatUntilDate).nftTaxon(String.valueOf(p.getNftTaxon())).build();
 	}
 
@@ -109,6 +123,8 @@ public class AridropSummaryServiceImpl implements AirdropSummaryService {
 
 		Optional<PaymentRequestEnt> paymentRequest = paymentRequestRepo
 				.findOne(Example.of(PaymentRequestEnt.builder().id(paymentRequestId).build()));
+		
+		
 
 		if (paymentRequest.isEmpty()) {
 			return null;

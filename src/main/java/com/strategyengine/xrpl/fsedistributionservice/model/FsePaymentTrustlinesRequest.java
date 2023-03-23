@@ -64,7 +64,6 @@ public class FsePaymentTrustlinesRequest implements Serializable {
 	private boolean useBlacklist;
 
 	@ApiModelProperty(value="I agree to the service fee per recipients to use this service", required=true)
-	@NonNull
 	private boolean agreeFee;
 
 	@ApiModelProperty(value = "OPTIONAL:  The maximum number of trustlines to send to.   Sorted by oldest, so if set to 10 then only the oldest 10 trustlines will receive this drop.  If set to 50000 but there are only 10000 actual trustlines, then all 10000 will receive the drop.   You can leave the attribute out to send to everyone", required = false)
@@ -102,5 +101,8 @@ public class FsePaymentTrustlinesRequest implements Serializable {
 
 	@ApiModelProperty(value = "Email contact", required = false)
 	private String email;
+
+	@ApiModelProperty(value = "Automatically approve starting the drop without user review", required = false)
+	private boolean autoApprove;
 
 }

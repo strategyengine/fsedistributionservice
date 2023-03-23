@@ -118,7 +118,7 @@ public class AirDropSchedulerImpl {
 				return;
 			}
 
-			// there will always be at least on scheduled run in drop_request since it is
+			// there will always be at least one scheduled run in drop_request since it is
 			// inserted when requested
 			DropScheduleRunEnt latestScheduledRun = getLatestRun(scheduleRuns);
 
@@ -172,6 +172,7 @@ public class AirDropSchedulerImpl {
 					.snapshotCurrencyName(p.getSnapshotCurrencyName())
 					.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 					.toClassicAddresses(toClassicAddresses)
+					.autoApprove(p.getAutoApprove())
 					.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).email(p.getContactEmail())
 					.useBlacklist(p.getUseBlacklist()).build());
 		} else {
@@ -188,6 +189,7 @@ public class AirDropSchedulerImpl {
 							.retryOfId(p.getRetryOfId()).snapshotCurrencyName(p.getSnapshotCurrencyName())
 							.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 							.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
+							.autoApprove(p.getAutoApprove())
 							.email(p.getContactEmail()).useBlacklist(p.getUseBlacklist()).build(),
 					null);
 		}

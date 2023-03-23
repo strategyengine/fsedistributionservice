@@ -24,7 +24,7 @@ public interface XrplService {
 
 	List<FseTrustLine> getTrustLines(String classicAddress, FseSort sort);
 
-	void approveAirdrop(Long paymentRequestId, String privKey);
+	void approveAirdrop(Long paymentRequestId, String privKey, boolean isAutoApprove);
 
 	List<FseTrustLine> fetchAllTrustlines(FsePaymentTrustlinesRequest paymentRequestPre);
 

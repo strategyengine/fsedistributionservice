@@ -141,4 +141,7 @@ public class PaymentRequestEnt {
 	@Column(name = "CONTACT_EMAIL")
 	private String contactEmail;
 	
+	@Column(name = "AUTO_APPROVE")
+	private Boolean autoApprove;
+	
 }

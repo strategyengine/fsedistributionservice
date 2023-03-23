@@ -35,9 +35,10 @@
     <include file="sql/1.23-alter-table-drop-recip_add_nft.xml" relativeToChangelogFile="true"/>     
     <include file="sql/1.24-alter-table-drop-req_starttime.xml" relativeToChangelogFile="true"/>     
     <include file="sql/1.25-create-schedule.xml" relativeToChangelogFile="true"/>     
+    <include file="sql/1.26-alter-table-drop-req_autoapprove.xml" relativeToChangelogFile="true"/>     
     
     
-    
+ 
     
        
        

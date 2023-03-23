@@ -103,6 +103,9 @@ public class FsePaymentRequest implements Serializable {
 	
 	@ApiModelProperty(value = "Email contact", required = false)
 	private String email;
+	
+	@ApiModelProperty(value = "Automatically approve starting the drop without user review", required = false)
+	private boolean autoApprove;
 
 
 }

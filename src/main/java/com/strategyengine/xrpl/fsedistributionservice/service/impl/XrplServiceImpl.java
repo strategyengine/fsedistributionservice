@@ -33,6 +33,7 @@ import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientServi
 import com.strategyengine.xrpl.fsedistributionservice.entity.CancelDropRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
+import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropFrequency;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
@@ -49,6 +50,7 @@ import com.strategyengine.xrpl.fsedistributionservice.model.UserAddresses;
 import com.strategyengine.xrpl.fsedistributionservice.repo.CancelDropRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
+import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
 import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
@@ -123,6 +125,10 @@ public class XrplServiceImpl implements XrplService {
 	@VisibleForTesting
 	@Autowired
 	protected DropScheduleRepo dropScheduleRepo;
+
+	@VisibleForTesting
+	@Autowired
+	protected DropScheduleRunRepo dropScheduleRunRepo;
 
 	@Autowired
 	protected EmailService emailService;
@@ -317,8 +323,8 @@ public class XrplServiceImpl implements XrplService {
 						: paymentRequest.getMaxXrpFeePerTransaction())
 				.retryOfId(paymentRequest.getRetryOfId())
 				.trustlineIssuerClassicAddress(paymentRequest.getTrustlineIssuerClassicAddress().trim())
-				.nftIssuerAddress(paymentRequest.getNftIssuingAddress()).nftTaxon(paymentRequest.getNftTaxon())
-				.updateDate(now()).build());
+				.autoApprove(paymentRequestPre.isAutoApprove()).nftIssuerAddress(paymentRequest.getNftIssuingAddress())
+				.nftTaxon(paymentRequest.getNftTaxon()).updateDate(now()).build());
 		if (blacklistService.getBlackListedCurrencies().contains(paymentRequest.getCurrencyName())) {
 			rejectDrop(
 					"Airdrops disabled.  The open source tool can be downloaded here https://github.com/strategyengine/fsedistributionservice",
@@ -424,10 +430,12 @@ public class XrplServiceImpl implements XrplService {
 		if (PaymentType.PROPORTIONAL.equals(paymentRequestEnt.getPaymentType())) {
 			savedPaymentRequest = paymentRequestRepo
 					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.POPULATING_ADDRESSES).build());
-			executorPopulateAddresses.execute(() -> updateRecipientAmountThread(savedPaymentRequest, savedRecipients, paymentRequestPre));
+			executorPopulateAddresses.execute(
+					() -> updateRecipientAmountThread(savedPaymentRequest, savedRecipients, paymentRequestPre));
 		} else {
-			savedPaymentRequest = paymentRequestRepo
-					.save(paymentRequestEnt.toBuilder().status(DropRequestStatus.PENDING_REVIEW).build());
+			savedPaymentRequest = paymentRequestRepo.save(paymentRequestEnt.toBuilder().status(
+					paymentRequestEnt.getAutoApprove() ? DropRequestStatus.QUEUED : DropRequestStatus.PENDING_REVIEW)
+					.build());
 		}
 
 		return saveSchedule(savedPaymentRequest, paymentRequestPre.getFrequency(),
@@ -455,7 +463,8 @@ public class XrplServiceImpl implements XrplService {
 
 	}
 
-	private void updateRecipientAmountThread(PaymentRequestEnt paymentReq, List<DropRecipientEnt> savedRecipients, FsePaymentRequest paymentRequestPre) {
+	private void updateRecipientAmountThread(PaymentRequestEnt paymentReq, List<DropRecipientEnt> savedRecipients,
+			FsePaymentRequest paymentRequestPre) {
 
 		String issuingAddressForProportion = StringUtils
 				.hasLength(paymentReq.getSnapshotTrustlineIssuerClassicAddress())
@@ -479,7 +488,8 @@ public class XrplServiceImpl implements XrplService {
 		if (paymentRequestPre.getFrequency() != null) {
 			paymentReq.setStatus(DropRequestStatus.SCHEDULED);
 		} else {
-			paymentReq.setStatus(DropRequestStatus.PENDING_REVIEW);
+			paymentReq.setStatus(
+					paymentReq.getAutoApprove() ? DropRequestStatus.QUEUED : DropRequestStatus.PENDING_REVIEW);
 		}
 		paymentRequestRepo.save(paymentReq);
 
@@ -602,6 +612,7 @@ public class XrplServiceImpl implements XrplService {
 				.newTrustlinesOnly(p.isNewTrustlinesOnly()).status(DropRequestStatus.POPULATING_ADDRESSES)
 				.useBlacklist(p.isUseBlacklist()).snapshotCurrencyName(p.getSnapshotCurrencyName())
 				.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
+				.autoApprove(paymentRequestPre.isAutoApprove())
 				.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress().trim()).updateDate(now()).build());
 
 		PaymentRequestEnt savedPayment = saveSchedule(paymentRequestEnt, paymentRequestPre.getFrequency(),
@@ -617,7 +628,7 @@ public class XrplServiceImpl implements XrplService {
 	private PaymentRequestEnt saveSchedule(PaymentRequestEnt paymentRequestEnt, DropFrequency frequency,
 			Date repeatUntilDate) {
 
-		if ( frequency == null) {
+		if (frequency == null) {
 			return paymentRequestEnt;
 		}
 
@@ -765,7 +776,8 @@ public class XrplServiceImpl implements XrplService {
 			}
 		}
 
-		DropRequestStatus status = paymentRequestEnt.getStartTime() != null ? DropRequestStatus.PENDING_REVIEW
+		DropRequestStatus status = paymentRequestEnt.getStartTime() != null
+				? paymentRequestEnt.getAutoApprove() ? DropRequestStatus.QUEUED : DropRequestStatus.PENDING_REVIEW
 				: DropRequestStatus.SCHEDULED;
 		return paymentRequestRepo.save(paymentRequestEnt.toBuilder().status(status).build());
 
@@ -999,8 +1011,8 @@ public class XrplServiceImpl implements XrplService {
 				|| DropRequestStatus.POPULATING_ADDRESSES.equals(p.getStatus())
 				|| DropRequestStatus.PENDING_REVIEW.equals(p.getStatus())
 				|| DropRequestStatus.QUEUED.equals(p.getStatus())) {
-			paymentRequestRepo
-					.save(p.toBuilder().status(DropRequestStatus.REJECTED).failReason(AirDropRunnerImpl.REASON_CANCEL_BY_USER).build());
+			paymentRequestRepo.save(p.toBuilder().status(DropRequestStatus.REJECTED)
+					.failReason(AirDropRunnerImpl.REASON_CANCEL_BY_USER).build());
 		}
 
 		return p;
@@ -1015,15 +1027,16 @@ public class XrplServiceImpl implements XrplService {
 		List<PaymentRequestEnt> paymentEnts;
 		if (!StringUtils.hasLength(issuingAddress)) {
 			cancelablePayments.addAll(paymentRequestRepo
-					.findAll(Example.of(PaymentRequestEnt.builder().currencyName("XRP").status(DropRequestStatus.SCHEDULED).build())).stream()
-					.filter(s -> s.getTrustlineIssuerClassicAddress() == null).collect(Collectors.toList()));
+					.findAll(Example.of(PaymentRequestEnt.builder().currencyName("XRP")
+							.status(DropRequestStatus.SCHEDULED).build()))
+					.stream().filter(s -> s.getTrustlineIssuerClassicAddress() == null).collect(Collectors.toList()));
 
 			paymentEnts = paymentRequestRepo.findActive().stream().filter(p -> "XRP".equals(p.getCurrencyName()))
 					.collect(Collectors.toList());
 
 		} else {
-			cancelablePayments.addAll(paymentRequestRepo.findAll(
-					Example.of(PaymentRequestEnt.builder().trustlineIssuerClassicAddress(issuingAddress).status(DropRequestStatus.SCHEDULED).build())));
+			cancelablePayments.addAll(paymentRequestRepo.findAll(Example.of(PaymentRequestEnt.builder()
+					.trustlineIssuerClassicAddress(issuingAddress).status(DropRequestStatus.SCHEDULED).build())));
 
 			paymentEnts = paymentRequestRepo.findActive().stream()
 					.filter(p -> issuingAddress.equals(p.getTrustlineIssuerClassicAddress()))
@@ -1059,7 +1072,7 @@ public class XrplServiceImpl implements XrplService {
 	}
 
 	@Override
-	public void approveAirdrop(Long paymentRequestId, String privKey) {
+	public void approveAirdrop(Long paymentRequestId, String privKey, boolean autoApprove) {
 		Optional<PaymentRequestEnt> payReqEnt = paymentRequestRepo.findById(paymentRequestId);
 		if (payReqEnt.isEmpty()) {
 			throw new BadRequestException("Invalid payment request id");
@@ -1069,6 +1082,23 @@ public class XrplServiceImpl implements XrplService {
 			paymentRequestRepo.save(payReqEnt.get());
 			throw new BadRequestException("This airdrop has expired.  Please create a new one.");
 		}
+
+		if (autoApprove) {
+			Optional<DropScheduleRunEnt> schedRun = dropScheduleRunRepo
+					.findOne(Example.of(DropScheduleRunEnt.builder().dropRequestId(paymentRequestId).build()));
+			if (schedRun.isPresent()) {
+				Optional<DropScheduleEnt> sched = dropScheduleRepo.findById(schedRun.get().getDropScheduleId());
+				if (sched.isPresent()) {
+					Optional<PaymentRequestEnt> schedPayment = paymentRequestRepo
+							.findById(sched.get().getDropRequestId());
+					if (schedPayment.isPresent()) {
+						paymentRequestRepo.save(schedPayment.get().toBuilder().autoApprove(autoApprove).build());
+					}
+				}
+			}
+
+		}
+
 		if (payReqEnt.get().getFromPrivateKey().equals(privKey)) {
 			payReqEnt.get().setStatus(DropRequestStatus.QUEUED);
 			paymentRequestRepo.save(payReqEnt.get());
