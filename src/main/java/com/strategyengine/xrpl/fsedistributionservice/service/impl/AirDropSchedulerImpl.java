@@ -94,6 +94,16 @@ public class AirDropSchedulerImpl {
 					.builder().id(sched.getDropRequestId()).status(DropRequestStatus.SCHEDULED).build()));
 
 			if (scheduledPaymentReq.isEmpty()) {
+				
+				Optional<PaymentRequestEnt> scheduledPaymentReqRejected = paymentRequestRepo.findOne(Example.of(PaymentRequestEnt
+						.builder().id(sched.getDropRequestId()).status(DropRequestStatus.REJECTED).build()));
+				
+				if(scheduledPaymentReqRejected.isPresent()) {
+					//update the schedule to being rejected as well
+					dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
+					return;
+				}
+				
 				log.error(
 						"NEEDS IMMEDIATE ATTENTION:  Schedule exists, but no scheduled payment request.  This should have been created in xrplservice! "
 								+ sched);
