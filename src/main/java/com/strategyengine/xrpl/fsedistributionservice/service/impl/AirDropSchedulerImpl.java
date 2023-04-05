@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
@@ -168,9 +169,9 @@ public class AirDropSchedulerImpl {
 		if (DropType.GLOBALID_SPECIFICADDRESSES.equals(p.getDropType())
 				|| DropType.SPECIFICADDRESSES.equals(p.getDropType())) {
 
-			List<String> toClassicAddresses = dropRecipientRepo
+			List<String> toClassicAddresses = p.getNftIssuerAddress() == null  ? dropRecipientRepo
 					.findAll(Example.of(DropRecipientEnt.builder().dropRequestId(p.getId()).build())).stream()
-					.map(d -> d.getAddress()).collect(Collectors.toList());
+					.map(d -> d.getAddress()).collect(Collectors.toList()) : null;
 
 			newPaymentRequest = xrplService.sendFsePayment(FsePaymentRequest.builder().agreeFee(true)
 					.amount(p.getAmount()).currencyName(p.getCurrencyName())
@@ -183,6 +184,8 @@ public class AirDropSchedulerImpl {
 					.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 					.toClassicAddresses(toClassicAddresses)
 					.autoApprove(p.getAutoApprove())
+					.nftIssuingAddress(p.getNftIssuerAddress())
+					.nftTaxon(p.getNftTaxon())
 					.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).email(p.getContactEmail())
 					.useBlacklist(p.getUseBlacklist()).build());
 		} else {
