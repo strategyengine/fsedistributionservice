@@ -305,7 +305,7 @@ public class AirDropSchedulerImpl {
 		StringBuilder sb = new StringBuilder();
 		for (DropScheduleRunEnt run : scheduleRuns) {
 			sb.append("<br><a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
-					+ scheduledPaymentReq.get().getId() + "'>Drop Details</a>");
+					+ run.getDropRequestId() + "'>Drop Details "+run.getDropRequestId()+ "</a>");
 		}
 
 		if (scheduledPaymentReq.get().getContactEmail() != null) {
