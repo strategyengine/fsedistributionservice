@@ -148,7 +148,7 @@ public class AirDropSchedulerImpl {
 			if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus()) && 
 					!AirDropRunnerImpl.REASON_CANCEL_BY_USER.equals(latestPaymentReqRun.get().getFailReason())) {
 				// since the last run failed, this schedule is being terminated
-				markScheduleCompleteRejected(sched, latestPaymentReqRun.get());
+				markScheduleCompleteRejected(sched, scheduledPaymentReq, latestPaymentReqRun.get());
 				return;
 
 			}
@@ -271,15 +271,14 @@ public class AirDropSchedulerImpl {
 		return Calendar.getInstance();
 	}
 
-	private void markScheduleCompleteRejected(DropScheduleEnt sched, PaymentRequestEnt latestPaymentReq) {
+	private void markScheduleCompleteRejected(DropScheduleEnt sched, Optional<PaymentRequestEnt> scheduledPaymentReq, 
+			PaymentRequestEnt latestPaymentReq) {
 
 		DropScheduleEnt schedComplete = dropScheduleRepo
 				.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
-		
-		Optional<PaymentRequestEnt> originalPaymentSched = paymentRequestRepo.findById(sched.getDropRequestId());
-		
-		if(originalPaymentSched.isPresent()) {
-			paymentRequestRepo.save(originalPaymentSched.get().toBuilder().status(DropRequestStatus.COMPLETE).build());
+
+		if(scheduledPaymentReq.isPresent()) {
+			paymentRequestRepo.save(scheduledPaymentReq.get().toBuilder().status(DropRequestStatus.COMPLETE).build());
 		}
 		if (latestPaymentReq.getContactEmail() != null) {
 			emailService.sendEmail(latestPaymentReq.getContactEmail(),
@@ -294,14 +293,16 @@ public class AirDropSchedulerImpl {
 
 	private void markScheduleComplete(DropScheduleEnt sched, Optional<PaymentRequestEnt> scheduledPaymentReq,
 			List<DropScheduleRunEnt> scheduleRuns) {
-
-		DropScheduleEnt schedComplete = dropScheduleRepo
+		dropScheduleRepo
 				.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.COMPLETE).build());
 
 		if (scheduledPaymentReq.isEmpty() || scheduleRuns.isEmpty()) {
 			return;
 		}
 
+		paymentRequestRepo.save(scheduledPaymentReq.get().toBuilder().status(DropRequestStatus.COMPLETE).build());
+		
+		
 		StringBuilder sb = new StringBuilder();
 		for (DropScheduleRunEnt run : scheduleRuns) {
 			sb.append("<br><a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
