@@ -15,7 +15,6 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
-import org.xrpl.xrpl4j.crypto.PrivateKey;
 import org.xrpl.xrpl4j.keypairs.KeyPair;
 import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
 import org.xrpl.xrpl4j.wallet.Wallet;
@@ -228,7 +227,7 @@ public class ValidationServiceImpl implements ValidationService {
 		validateAmount(payment.getAmount());
 
 		validateNotFSEorSSEImposter(payment.getCurrencyName(), payment.getTrustlineIssuerClassicAddress());
-		validatePrivateKey(payment.getFromPrivateKey());
+		//validatePrivateKey(payment.getFromPrivateKey());
 		validatePublicSigning(payment.getFromSigningPublicKey());
 
 		validateFromAddressMatchesKeys(payment.getFromClassicAddress(), payment.getFromPrivateKey(),
@@ -273,18 +272,6 @@ public class ValidationServiceImpl implements ValidationService {
 
 	}
 
-	protected void validatePrivateKey(@NonNull String privateKeyStr) {
-
-		if (StringUtils.isEmpty(privateKeyStr)) {
-			throw new BadRequestException("Private key is required");
-		}
-		try {
-			PrivateKey.fromBase16EncodedPrivateKey(privateKeyStr);
-		} catch (Exception e) {
-			throw new BadRequestException("Invalid private key received");
-		}
-
-	}
 
 	private void validateCurrency(@NonNull String currencyName) {
 
@@ -338,7 +325,7 @@ public class ValidationServiceImpl implements ValidationService {
 		validateNotFSEorSSEImposter(payment.getCurrencyName(), payment.getTrustlineIssuerClassicAddress());
 		validateDecimal(payment.getMaxXrpFeePerTransaction(), "Max XRP Fee");
 
-		validatePrivateKey(payment.getFromPrivateKey());
+		//validatePrivateKey(payment.getFromPrivateKey());
 		validatePublicSigning(payment.getFromSigningPublicKey());
 
 		validateFromAddressMatchesKeys(payment.getFromClassicAddress(), payment.getFromPrivateKey(),
