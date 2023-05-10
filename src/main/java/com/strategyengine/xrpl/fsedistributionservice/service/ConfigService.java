@@ -14,4 +14,6 @@ public interface ConfigService {
 
 	String getScamAcountKey();
 
+	String getAutoBurnSeed();
+
 }

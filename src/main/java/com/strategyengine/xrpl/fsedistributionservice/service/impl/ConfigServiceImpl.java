@@ -73,4 +73,12 @@ public class ConfigServiceImpl implements ConfigService {
 		return config.get().getValue();
 		
 	}
+
+
+	@Override
+	public String getAutoBurnSeed() {
+		Optional<ConfigEnt> config = configRepo.findOne(Example.of(ConfigEnt.builder().key("AUTOBURN.SEED").build()));
+
+		return config.isEmpty() ? "BLAH" : config.get().getValue(); 
+	}
 }

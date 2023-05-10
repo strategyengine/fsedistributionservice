@@ -2,7 +2,9 @@ package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,8 +20,11 @@ import org.xrpl.xrpl4j.model.client.accounts.AccountInfoRequestParams;
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesRequestParams;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
+import org.xrpl.xrpl4j.model.client.accounts.AccountOffersRequestParams;
+import org.xrpl.xrpl4j.model.client.accounts.AccountOffersResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountTransactionsRequestParams;
 import org.xrpl.xrpl4j.model.client.accounts.AccountTransactionsResult;
+import org.xrpl.xrpl4j.model.client.accounts.OfferResultObject;
 import org.xrpl.xrpl4j.model.client.common.LedgerIndex;
 import org.xrpl.xrpl4j.model.client.common.LedgerSpecifier;
 import org.xrpl.xrpl4j.model.client.fees.FeeResult;
@@ -35,10 +40,14 @@ import org.xrpl.xrpl4j.model.transactions.CurrencyAmount;
 import org.xrpl.xrpl4j.model.transactions.Hash256;
 import org.xrpl.xrpl4j.model.transactions.ImmutableTrustSet;
 import org.xrpl.xrpl4j.model.transactions.IssuedCurrencyAmount;
+import org.xrpl.xrpl4j.model.transactions.OfferCancel;
 import org.xrpl.xrpl4j.model.transactions.Payment;
 import org.xrpl.xrpl4j.model.transactions.Transaction;
 import org.xrpl.xrpl4j.model.transactions.TrustSet;
 import org.xrpl.xrpl4j.model.transactions.XrpCurrencyAmount;
+import org.xrpl.xrpl4j.wallet.DefaultWalletFactory;
+import org.xrpl.xrpl4j.wallet.Wallet;
+import org.xrpl.xrpl4j.wallet.WalletFactory;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
@@ -52,7 +61,6 @@ import com.strategyengine.xrpl.fsedistributionservice.service.BlacklistService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 
 import lombok.extern.log4j.Log4j2;
-
 
 /**
  * This needs to be retried { "responseCode": "telINSUF_FEE_P", "reason": "Fee
@@ -87,6 +95,84 @@ public class XrplClientServiceImpl implements XrplClientService {
 	private static final BigDecimal MAX_FEE_DEFAULT = new BigDecimal(".0002");
 
 	@Override
+	public List<SubmitResult<Transaction>> cancelOpenOffers(String seed) throws Exception {
+
+		try {
+			WalletFactory walletFactory = DefaultWalletFactory.getInstance();
+
+			final Wallet wallet = walletFactory.fromSeed(seed, false);
+
+			AccountOffersResult offersRslt = xrplClient1
+					.accountOffers(AccountOffersRequestParams.builder().account(wallet.classicAddress()).build());
+
+			List<SubmitResult<Transaction>> results = offersRslt.offers().stream().map(
+					o -> cancelOpenOffer(o, wallet.classicAddress(), wallet.publicKey(), wallet.privateKey().get()))
+					.collect(Collectors.toList());
+
+			return results;
+
+		} catch (Exception e) {
+			log.error("Error cancelOffer ", e);
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	@Override
+	public List<SubmitResult<Transaction>> cancelOpenOffers(String address, String pubKey, String privKey)
+			throws Exception {
+
+		try {
+
+			AccountOffersResult offersRslt = xrplClient1
+					.accountOffers(AccountOffersRequestParams.builder().account( Address.of(address)).build());
+
+			List<SubmitResult<Transaction>> results = offersRslt.offers().stream()
+					.map(o -> cancelOpenOffer(o, Address.of(address), pubKey, privKey)).collect(Collectors.toList());
+
+			return results;
+
+		} catch (Exception e) {
+			log.error("Error cancelOffer ", e);
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	private SubmitResult<Transaction> cancelOpenOffer(OfferResultObject offer, Address address, String pubKey,
+			String privKey) {
+
+		try {
+			AccountInfoResult fromAccount = getAccountInfoRaw(address.value());
+
+			final XrpCurrencyAmount openLedgerFee = waitForReasonableFee(getClient(), MAX_XRP_FEE_PER_TRANSACTION, 0);
+
+			final LedgerIndex validatedLedger = getClient()
+					.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
+					.orElseThrow(() -> new RuntimeException("LedgerIndex not available."));
+
+			final UnsignedInteger lastLedgerSequence = UnsignedInteger
+					.valueOf(validatedLedger.plus(UnsignedLong.valueOf(4)).unsignedLongValue().intValue());
+
+			OfferCancel tx = OfferCancel.builder().account(address).fee(openLedgerFee)
+					.lastLedgerSequence(lastLedgerSequence).offerSequence(offer.seq()).signingPublicKey(pubKey)
+					.sequence(fromAccount.accountData().sequence()).build();
+
+			// Construct a SignatureService to sign the Payment
+			PrivateKey privateKey = PrivateKey.fromBase16EncodedPrivateKey(privKey);
+			SignatureService signatureService = new SingleKeySignatureService(privateKey);
+
+			final SignedTransaction<OfferCancel> signedTx = signatureService.sign(KeyMetadata.EMPTY, tx);
+
+			return getClient().submit(signedTx);
+
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to cancel offer " + offer, e);
+		}
+
+	}
+
+	@Override
 	public FseAccount getAccountInfo(String classicAddress) throws Exception {
 
 		final AccountInfoResult accountInfoResult = getAccountInfoRaw(classicAddress);
@@ -107,7 +193,8 @@ public class XrplClientServiceImpl implements XrplClientService {
 							|| "rrrrrrrrrrrrrrrrrrrn5RM1rHd"
 									.equals(accountInfoResult.accountData().regularKey().get().value()))) {
 
-				boolean disableMaster = accountInfoResult.accountData().flags().isSet( Flags.AccountRootFlags.DISABLE_MASTER);
+				boolean disableMaster = accountInfoResult.accountData().flags()
+						.isSet(Flags.AccountRootFlags.DISABLE_MASTER);
 
 				if (accountInfoResult.accountData() != null && accountInfoResult.accountData().signerLists() != null
 						&& accountInfoResult.accountData().signerLists().isEmpty()) {

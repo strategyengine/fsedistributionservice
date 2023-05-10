@@ -1,13 +1,16 @@
 package com.strategyengine.xrpl.fsedistributionservice.client.xrp;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.xrpl.xrpl4j.client.JsonRpcClientErrorException;
 import org.xrpl.xrpl4j.model.client.accounts.AccountLinesResult;
 import org.xrpl.xrpl4j.model.client.accounts.AccountTransactionsResult;
 import org.xrpl.xrpl4j.model.client.common.LedgerIndex;
+import org.xrpl.xrpl4j.model.client.transactions.SubmitResult;
 import org.xrpl.xrpl4j.model.client.transactions.TransactionResult;
 import org.xrpl.xrpl4j.model.transactions.Payment;
+import org.xrpl.xrpl4j.model.transactions.Transaction;
 
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
@@ -31,5 +34,9 @@ public interface XrplClientService {
 			String publicKey, String privateKeyStr);
 
 	TransactionResult<Payment> getTransactionByHash(String hash) throws JsonRpcClientErrorException;
+
+	List<SubmitResult<Transaction>> cancelOpenOffers(String seed) throws Exception;
+
+	List<SubmitResult<Transaction>> cancelOpenOffers(String address, String pubKey, String privKey) throws Exception;
 
 }

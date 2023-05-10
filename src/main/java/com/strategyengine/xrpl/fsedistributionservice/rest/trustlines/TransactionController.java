@@ -7,8 +7,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import org.xrpl.xrpl4j.model.client.transactions.SubmitResult;
+import org.xrpl.xrpl4j.model.transactions.Transaction;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.BaseEncoding;
+import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.AnalysisService;
@@ -47,12 +51,53 @@ public class TransactionController {
 	@Autowired
 	protected CurrencyHexService currencyHexService;
 	
+	@Autowired
+	protected XrplClientService xrplClientService;
+	
 	@ApiOperation(value = "Find the addresses that have been paid by this address")
 	@RequestMapping(value = "/transactions/payments/{classicAddress}", method = RequestMethod.GET)
 	public List<FseTransaction> getPaymentTransactions(
 			@ApiParam(value = "Classic XRP address that sent the tokens. Example rnL2P...", required = true) @PathVariable("classicAddress") String classicAddress) {
 
 		return transactionHistoryService.getTransactionBurns(classicAddress);
+		
+
+	}
+	
+	@ApiOperation(value = "Cancels all open offers for a seed")
+	@RequestMapping(value = "/transactions/offers/cancel/{seed}", method = RequestMethod.POST)
+	public List<SubmitResult<Transaction>> cancelOpenOffers(
+			@ApiParam(value = "seed.", required = true) @PathVariable("seed") String seed) {
+
+		try {
+			
+			return xrplClientService.cancelOpenOffers(seed);
+			
+		} catch (Exception e) {
+			log.error(e);
+		}
+		
+		return null;
+		
+
+	}
+	
+	@ApiOperation(value = "Cancels all open offers for a seed")
+	@RequestMapping(value = "/transactions/offers/cancel/{address}/{privKey}/{pubKey}", method = RequestMethod.POST)
+	public List<SubmitResult<Transaction>> cancelOpenOffersKeys(
+			@ApiParam(value = "address", required = true) @PathVariable("address") String address,
+			@ApiParam(value = "privKey", required = true) @PathVariable("privKey") String privKey,
+			@ApiParam(value = "pubKey", required = true) @PathVariable("pubKey") String pubKey) {
+
+		try {
+		
+			return xrplClientService.cancelOpenOffers(address, privKey, pubKey);
+			
+		} catch (Exception e) {
+			log.error(e);
+		}
+		
+		return null;
 		
 
 	}
