@@ -153,6 +153,11 @@ public class AirDropSchedulerImpl {
 				return;
 
 			}
+			
+			if(scheduledPaymentReq.get().getFromPrivateKey()==null || scheduledPaymentReq.get().getFromSigningPublicKey()==null) {
+				log.error("LOOK!!  Scheduled Payment cannot be run because keys are null " + scheduledPaymentReq.get());
+				return;
+			}
 
 			if (shouldRunDropScheduleNow(schedStartTime, latestPaymentReqRun.get().getCreateDate(),
 					sched.getFrequency())) {
@@ -191,16 +196,17 @@ public class AirDropSchedulerImpl {
 		} else {
 
 			newPaymentRequest = xrplService.sendFsePaymentToTrustlines(
-					FsePaymentTrustlinesRequest.builder().maxBalance(new BigDecimal(p.getMaxBalance()).doubleValue())
+					FsePaymentTrustlinesRequest.builder().maxBalance(p.getMaxBalance()!=null? new BigDecimal(p.getMaxBalance()).doubleValue(): null)
 							.maximumTrustlines(p.getMaximumTrustlines())
-							.minBalance(new BigDecimal(p.getMinBalance()).doubleValue())
-							.newTrustlinesOnly(p.getNewTrustlinesOnly()).agreeFee(true).amount(p.getAmount())
+							.minBalance(p.getMinBalance()!=null ? new BigDecimal(p.getMinBalance()).doubleValue(): null)
+							.newTrustlinesOnly(p.getNewTrustlinesOnly())
+							.agreeFee(true)
+							.amount(p.getAmount())
 							.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
 							.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
 							.globalIdVerified(DropType.GLOBALID == p.getDropType())
 							.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).paymentType(p.getPaymentType())
 							.retryOfId(p.getRetryOfId()).snapshotCurrencyName(p.getSnapshotCurrencyName())
-							.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
 							.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
 							.autoApprove(p.getAutoApprove())
 							.email(p.getContactEmail()).useBlacklist(p.getUseBlacklist()).build(),

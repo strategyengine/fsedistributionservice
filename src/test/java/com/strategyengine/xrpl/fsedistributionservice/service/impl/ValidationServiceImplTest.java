@@ -72,7 +72,7 @@ public class ValidationServiceImplTest {
 	@Test
 	public void testValidateDistBalanceBalanceJustEnough() {
 
-		sut.validateDistributingTokenBalance(Optional.of(FseTrustLine.builder().balance("800").build()), ".2", 4000);
+		sut.validateDistributingTokenBalance(Optional.of(FseTrustLine.builder().balance("800").build()), ".2", 4000, null, null);
 
 	}
 
@@ -81,7 +81,7 @@ public class ValidationServiceImplTest {
 
 		BadRequestException thrown = Assertions.assertThrows(BadRequestException.class, () -> {
 			sut.validateDistributingTokenBalance(Optional.of(FseTrustLine.builder().balance("800").build()), ".3",
-					4000);
+					4000, "fromAddress", "currencyName");
 		}, "BadRequestException was expected");
 
 	}
@@ -90,7 +90,7 @@ public class ValidationServiceImplTest {
 	public void testValidateDistBalBalanceNotEnoughZero() {
 
 		BadRequestException thrown = Assertions.assertThrows(BadRequestException.class, () -> {
-			sut.validateDistributingTokenBalance(Optional.of(FseTrustLine.builder().balance("0").build()), ".3", 4000);
+			sut.validateDistributingTokenBalance(Optional.of(FseTrustLine.builder().balance("0").build()), ".3", 4000, "fromAddress", "currencyName");
 		}, "BadRequestException was expected");
 
 	}

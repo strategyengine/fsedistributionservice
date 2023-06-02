@@ -731,7 +731,7 @@ public class XrplServiceImpl implements XrplService {
 							.of(FseTrustLine.builder().balance(String.valueOf(fromAccount.getXrpBalance())).build());
 				}
 				validationService.validateDistributingTokenBalance(fromAddressTrustLine, p.getAmount(),
-						eligibleTrustLines.size());
+						eligibleTrustLines.size(), p.getFromClassicAddress(), p.getCurrencyName());
 			}
 		} catch (BadRequestException e) {
 			rejectDrop(e, paymentRequestEnt);

@@ -414,7 +414,7 @@ public class ValidationServiceImpl implements ValidationService {
 
 	@Override
 	public void validateDistributingTokenBalance(Optional<FseTrustLine> fromAddressTrustLine, @NonNull String amount,
-			int size) {
+			int size, String fromAddress, String currencyName) {
 
 		if (fromAddressTrustLine.isEmpty()) {
 			throw new BadRequestException(
@@ -422,9 +422,8 @@ public class ValidationServiceImpl implements ValidationService {
 		}
 
 		if (Double.valueOf(fromAddressTrustLine.get().getBalance()) < (Double.valueOf(amount) * size)) {
-			throw new BadRequestException("The fromClassicAddress does not have enough of the currency to send "
-					+ amount + " to all " + size + " trustlines.  Lower the amount or add more of the tokens to "
-					+ fromAddressTrustLine.get().getClassicAddress());
+			throw new BadRequestException(String.format("The from address (%s) does not have enough %s tokens to send %s to each of the %s addresses.",
+					fromAddress, currencyName, amount, size));
 		}
 	}
 

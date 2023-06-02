@@ -45,7 +45,7 @@ public class AutoBurnRunnerImpl {
 	protected XrplClientService xrplClientService;
 
 	// automatically burns FSE and SSE held by the configured account
-	@Scheduled(fixedDelay = 60000)
+	@Scheduled(fixedDelay = 6000000)
 	public void autoBurn() {
 
 		String seed = configService.getAutoBurnSeed();

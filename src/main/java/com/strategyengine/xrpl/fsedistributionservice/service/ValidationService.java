@@ -22,9 +22,6 @@ public interface ValidationService {
 
 	void validateXrpBalance(BigDecimal balance, int size);
 
-	void validateDistributingTokenBalance(Optional<FseTrustLine> fromAddressTrustLine, @NonNull String amount,
-			int size);
-
 	boolean isValidClassicAddress(String classicAddress);
 
 	void validateAirdropNotAlreadyQueuedForIssuer(String issuingAddress);
@@ -32,6 +29,9 @@ public interface ValidationService {
 	void validateAirdropNotAlreadyQueuedForFromAddress(String fromAddress);
 
 	void validateFseBalance(Double fseBlance, int size, DropType dropType, boolean crossCurrencyDrop);
+
+	void validateDistributingTokenBalance(Optional<FseTrustLine> fromAddressTrustLine, @NonNull String amount, int size,
+			String fromAddress, String currencyName);
 
 	
 }
