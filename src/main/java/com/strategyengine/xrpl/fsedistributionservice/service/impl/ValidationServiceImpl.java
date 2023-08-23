@@ -24,6 +24,8 @@ import org.xrpl.xrpl4j.wallet.WalletFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.BaseEncoding;
+import com.modernmt.text.profanity.ProfanityFilter;
+import com.modernmt.text.profanity.dictionary.Profanity;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrpScanClient;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
@@ -67,6 +69,8 @@ public class ValidationServiceImpl implements ValidationService {
 	@Autowired
 	protected PaymentRequestRepo paymentRequestRepo;
 
+	private ProfanityFilter profanityChecker;
+
 	@PostConstruct
 	public void init() throws Exception {
 
@@ -79,6 +83,8 @@ public class ValidationServiceImpl implements ValidationService {
 				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 			competitors = reader.lines().collect(Collectors.toSet());
 		}
+
+		profanityChecker = new ProfanityFilter();
 	}
 
 	@Override
@@ -100,19 +106,26 @@ public class ValidationServiceImpl implements ValidationService {
 	// in binary format).</p>
 	protected void validateMemo(String m) {
 
+		if (m == null) {
+			return;
+		}
+
+		Profanity profanity = profanityChecker.find("en", m);
+		if (profanity!=null && profanity.text()!=null && profanity.text().length() > 0) {
+			throw new BadRequestException(
+					"The memo has at least one word that is too embarrassing for this bot to process. Please remove the following from the memo: " + profanity.text());
+		}
+		String e = null;
 		try {
-			if (m == null) {
-				return;
-			}
-			String e = BaseEncoding.base16().encode(m.getBytes(StandardCharsets.UTF_8));
+			e = BaseEncoding.base16().encode(m.getBytes(StandardCharsets.UTF_8));
 
-			if (m.length() > 500 || e.length() > 500) {
-				throw new BadRequestException("The Memo is too long");
-			}
-		} catch (Exception e) {
-			log.warn("Invalid memo - request rejeted " + e.getMessage());
-			throw new BadRequestException("Memo is invavlid!");
+		} catch (Exception ex) {
+			log.warn("Invalid memo - request rejeted " + ex.getMessage());
+			throw new BadRequestException("Memo is invalid!");
 
+		}
+		if (m.length() > 500 || e.length() > 500) {
+			throw new BadRequestException("The Memo is too long");
 		}
 
 	}
@@ -365,7 +378,7 @@ public class ValidationServiceImpl implements ValidationService {
 
 		validateFromAddressMatchesKeys(payment.getFromClassicAddress(), payment.getFromPrivateKey(),
 				payment.getFromSigningPublicKey());
-		
+
 		validateMemo(payment.getMemo());
 	}
 

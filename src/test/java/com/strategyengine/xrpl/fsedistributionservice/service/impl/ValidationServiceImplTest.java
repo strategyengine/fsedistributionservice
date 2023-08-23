@@ -22,9 +22,10 @@ public class ValidationServiceImplTest {
 	private ConfigService configService;
 
 	@BeforeEach
-	public void setup() {
+	public void setup() throws Exception {
 		MockitoAnnotations.openMocks(this);
 		sut = new ValidationServiceImpl();
+		sut.init();
 		sut.configService = configService;
 
 		Mockito.when(configService.getDouble(AirdropVerificationServiceImpl.DEFAULT_SERVICE_FEE_PER_INTERVAL_VERFIED))
@@ -47,7 +48,7 @@ public class ValidationServiceImplTest {
 	}
 	
 	@Test
-	public void testValidateMemo() {
+	public void testValidateMemoTooLong() {
 		
 		BadRequestException thrown = Assertions.assertThrows(BadRequestException.class, () -> {
 			sut.validateMemo("12345678910123456789101234567891012345678910123456789101234567891012345678910123456789101234567891012345678910"
@@ -59,6 +60,25 @@ public class ValidationServiceImplTest {
 		
 	}
 
+	@Test
+	public void testValidateMemoBadWord() {
+		
+		BadRequestException thrown = Assertions.assertThrows(BadRequestException.class, () -> {
+			sut.validateMemo("SHIT");
+		}, "BadRequestException was expected");
+
+		BadRequestException thrown2 = Assertions.assertThrows(BadRequestException.class, () -> {
+			sut.validateMemo("HORSE Fucker pull it");
+		}, "BadRequestException was expected");
+	}
+
+	@Test
+	public void testValidateMemo_Valid() {
+		
+		sut.validateMemo("This is a valid memo b@lkj.com");
+		
+	}
+	
 	@Test
 	public void testValidateFseBalanceNotEnoughZero() {
 
