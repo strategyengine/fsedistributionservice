@@ -29,6 +29,9 @@ public class FsePaymentTrustlinesRequest implements Serializable {
 
 	private static final long serialVersionUID = 8073142123190892467L;
 
+	@ApiModelProperty(value="Memo to add to each payment", required=false )
+	private String memo;
+	
 	@ApiModelProperty(value = "XRP address from wallet that is sending the token.  Example rnL2P..", required = true)
 	@NonNull
 	private String fromClassicAddress;

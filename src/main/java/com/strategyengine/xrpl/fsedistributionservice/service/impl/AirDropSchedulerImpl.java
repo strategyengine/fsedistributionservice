@@ -14,7 +14,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropScheduleRunEnt;
@@ -29,6 +28,7 @@ import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropScheduleRunRepo;
 import com.strategyengine.xrpl.fsedistributionservice.repo.PaymentRequestRepo;
+import com.strategyengine.xrpl.fsedistributionservice.rest.exception.BadRequestException;
 import com.strategyengine.xrpl.fsedistributionservice.service.EmailService;
 import com.strategyengine.xrpl.fsedistributionservice.service.ValidationService;
 import com.strategyengine.xrpl.fsedistributionservice.service.XrplService;
@@ -95,16 +95,29 @@ public class AirDropSchedulerImpl {
 					.builder().id(sched.getDropRequestId()).status(DropRequestStatus.SCHEDULED).build()));
 
 			if (scheduledPaymentReq.isEmpty()) {
-				
-				Optional<PaymentRequestEnt> scheduledPaymentReqRejected = paymentRequestRepo.findOne(Example.of(PaymentRequestEnt
-						.builder().id(sched.getDropRequestId()).status(DropRequestStatus.REJECTED).build()));
-				
-				if(scheduledPaymentReqRejected.isPresent()) {
-					//update the schedule to being rejected as well
+
+				Optional<PaymentRequestEnt> scheduledPaymentReqRejected = paymentRequestRepo
+						.findOne(Example.of(PaymentRequestEnt.builder().id(sched.getDropRequestId())
+								.status(DropRequestStatus.REJECTED).build()));
+
+				if (scheduledPaymentReqRejected.isPresent()) {
+					// update the schedule to being rejected as well
 					dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
 					return;
+				} else {
+
+					Optional<PaymentRequestEnt> scheduledPaymentReqComplete = paymentRequestRepo
+							.findOne(Example.of(PaymentRequestEnt.builder().id(sched.getDropRequestId())
+									.status(DropRequestStatus.COMPLETE).build()));
+
+					if (scheduledPaymentReqComplete.isPresent()) {
+						// update the schedule to being rejected as well
+						dropScheduleRepo
+								.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.COMPLETE).build());
+						return;
+					}
 				}
-				
+
 				log.error(
 						"NEEDS IMMEDIATE ATTENTION:  Schedule exists, but no scheduled payment request.  This should have been created in xrplservice! "
 								+ sched);
@@ -146,15 +159,16 @@ public class AirDropSchedulerImpl {
 			Optional<PaymentRequestEnt> latestPaymentReqRun = paymentRequestRepo
 					.findOne(Example.of(PaymentRequestEnt.builder().id(latestScheduledRun.getDropRequestId()).build()));
 
-			if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus()) && 
-					!AirDropRunnerImpl.REASON_CANCEL_BY_USER.equals(latestPaymentReqRun.get().getFailReason())) {
+			if (DropRequestStatus.REJECTED.equals(latestPaymentReqRun.get().getStatus())
+					&& !AirDropRunnerImpl.REASON_CANCEL_BY_USER.equals(latestPaymentReqRun.get().getFailReason())) {
 				// since the last run failed, this schedule is being terminated
 				markScheduleCompleteRejected(sched, scheduledPaymentReq, latestPaymentReqRun.get());
 				return;
 
 			}
-			
-			if(scheduledPaymentReq.get().getFromPrivateKey()==null || scheduledPaymentReq.get().getFromSigningPublicKey()==null) {
+
+			if (scheduledPaymentReq.get().getFromPrivateKey() == null
+					|| scheduledPaymentReq.get().getFromSigningPublicKey() == null) {
 				log.error("LOOK!!  Scheduled Payment cannot be run because keys are null " + scheduledPaymentReq.get());
 				return;
 			}
@@ -171,46 +185,69 @@ public class AirDropSchedulerImpl {
 	private DropScheduleRunEnt runSchedule(DropScheduleEnt sched, PaymentRequestEnt p) {
 
 		PaymentRequestEnt newPaymentRequest = null;
+
 		if (DropType.GLOBALID_SPECIFICADDRESSES.equals(p.getDropType())
 				|| DropType.SPECIFICADDRESSES.equals(p.getDropType())) {
 
-			List<String> toClassicAddresses = p.getNftIssuerAddress() == null  ? dropRecipientRepo
-					.findAll(Example.of(DropRecipientEnt.builder().dropRequestId(p.getId()).build())).stream()
-					.map(d -> d.getAddress()).collect(Collectors.toList()) : null;
+			List<String> toClassicAddresses = p.getNftIssuerAddress() == null
+					? dropRecipientRepo.findAll(Example.of(DropRecipientEnt.builder().dropRequestId(p.getId()).build()))
+							.stream().map(d -> d.getAddress()).collect(Collectors.toList())
+					: null;
 
-			newPaymentRequest = xrplService.sendFsePayment(FsePaymentRequest.builder().agreeFee(true)
-					.amount(p.getAmount()).currencyName(p.getCurrencyName())
-					.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
-					.fromSigningPublicKey(p.getFromSigningPublicKey())
-					.globalIdVerified(DropType.GLOBALID_SPECIFICADDRESSES == p.getDropType())
-					.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).nftIssuingAddress(p.getNftIssuerAddress())
-					.nftTaxon(p.getNftTaxon()).paymentType(p.getPaymentType()).retryOfId(p.getRetryOfId())
-					.snapshotCurrencyName(p.getSnapshotCurrencyName())
-					.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
-					.toClassicAddresses(toClassicAddresses)
-					.autoApprove(p.getAutoApprove())
-					.nftIssuingAddress(p.getNftIssuerAddress())
-					.nftTaxon(p.getNftTaxon())
-					.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress()).email(p.getContactEmail())
-					.useBlacklist(p.getUseBlacklist()).build());
+			try {
+				newPaymentRequest = xrplService.sendFsePayment(
+						FsePaymentRequest.builder().agreeFee(true).amount(p.getAmount()).memo(p.getMemo())
+								.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
+								.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
+								.globalIdVerified(DropType.GLOBALID_SPECIFICADDRESSES == p.getDropType())
+								.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction())
+								.nftIssuingAddress(p.getNftIssuerAddress()).nftTaxon(p.getNftTaxon())
+								.paymentType(p.getPaymentType()).retryOfId(p.getRetryOfId())
+								.snapshotCurrencyName(p.getSnapshotCurrencyName())
+								.snapshotTrustlineIssuerClassicAddress(p.getSnapshotTrustlineIssuerClassicAddress())
+								.toClassicAddresses(toClassicAddresses).autoApprove(p.getAutoApprove())
+								.nftIssuingAddress(p.getNftIssuerAddress()).nftTaxon(p.getNftTaxon())
+								.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
+								.email(p.getContactEmail()).useBlacklist(p.getUseBlacklist()).build());
+			} catch (BadRequestException e) {
+				if (newPaymentRequest != null) {
+					dropScheduleRunRepo.save(DropScheduleRunEnt.builder().createDate(new Date())
+							.dropRequestId(newPaymentRequest.getId()).dropScheduleId(sched.getId()).build());
+				}
+				paymentRequestRepo.save(p.toBuilder().status(DropRequestStatus.REJECTED).failReason(e.getMessage()).build());
+				dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
+				emailService.sendEmail(p.getContactEmail(), "Scheduled Airdrop Failure", e.getMessage());
+
+				throw new RuntimeException(e);
+			}
 		} else {
+			try {
+				newPaymentRequest = xrplService.sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest.builder()
+						.memo(p.getMemo())
+						.maxBalance(p.getMaxBalance() != null ? new BigDecimal(p.getMaxBalance()).doubleValue() : null)
+						.maximumTrustlines(p.getMaximumTrustlines())
+						.minBalance(p.getMinBalance() != null ? new BigDecimal(p.getMinBalance()).doubleValue() : null)
+						.newTrustlinesOnly(p.getNewTrustlinesOnly()).agreeFee(true).amount(p.getAmount())
+						.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
+						.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
+						.globalIdVerified(DropType.GLOBALID == p.getDropType())
+						.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).paymentType(p.getPaymentType())
+						.retryOfId(p.getRetryOfId()).snapshotCurrencyName(p.getSnapshotCurrencyName())
+						.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
+						.autoApprove(p.getAutoApprove()).email(p.getContactEmail()).useBlacklist(p.getUseBlacklist())
+						.build(), null);
 
-			newPaymentRequest = xrplService.sendFsePaymentToTrustlines(
-					FsePaymentTrustlinesRequest.builder().maxBalance(p.getMaxBalance()!=null? new BigDecimal(p.getMaxBalance()).doubleValue(): null)
-							.maximumTrustlines(p.getMaximumTrustlines())
-							.minBalance(p.getMinBalance()!=null ? new BigDecimal(p.getMinBalance()).doubleValue(): null)
-							.newTrustlinesOnly(p.getNewTrustlinesOnly())
-							.agreeFee(true)
-							.amount(p.getAmount())
-							.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
-							.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
-							.globalIdVerified(DropType.GLOBALID == p.getDropType())
-							.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).paymentType(p.getPaymentType())
-							.retryOfId(p.getRetryOfId()).snapshotCurrencyName(p.getSnapshotCurrencyName())
-							.trustlineIssuerClassicAddress(p.getTrustlineIssuerClassicAddress())
-							.autoApprove(p.getAutoApprove())
-							.email(p.getContactEmail()).useBlacklist(p.getUseBlacklist()).build(),
-					null);
+			} catch (BadRequestException e) {
+				if (newPaymentRequest != null) {
+					dropScheduleRunRepo.save(DropScheduleRunEnt.builder().createDate(new Date())
+							.dropRequestId(newPaymentRequest.getId()).dropScheduleId(sched.getId()).build());
+				}
+				paymentRequestRepo.save(p.toBuilder().status(DropRequestStatus.REJECTED).failReason(e.getMessage()).build());
+				dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
+				emailService.sendEmail(p.getContactEmail(), "Scheduled Airdrop Failure", e.getMessage());
+
+				throw new RuntimeException(e);
+			}
 		}
 
 		if (newPaymentRequest.getContactEmail() != null) {
@@ -231,7 +268,8 @@ public class AirDropSchedulerImpl {
 		// a drop should have occurred after this date
 		Date lastTimeDropShouldHaveRun = getNextRun(schedStartTime, frequency);
 
-		if (lastTimeDropShouldHaveRun != null && (lastPaymentDate==null || lastTimeDropShouldHaveRun.after(lastPaymentDate))
+		if (lastTimeDropShouldHaveRun != null
+				&& (lastPaymentDate == null || lastTimeDropShouldHaveRun.after(lastPaymentDate))
 				&& lastTimeDropShouldHaveRun.before(now().getTime())) {
 
 			return true;
@@ -280,13 +318,13 @@ public class AirDropSchedulerImpl {
 		return Calendar.getInstance();
 	}
 
-	private void markScheduleCompleteRejected(DropScheduleEnt sched, Optional<PaymentRequestEnt> scheduledPaymentReq, 
+	private void markScheduleCompleteRejected(DropScheduleEnt sched, Optional<PaymentRequestEnt> scheduledPaymentReq,
 			PaymentRequestEnt latestPaymentReq) {
 
 		DropScheduleEnt schedComplete = dropScheduleRepo
 				.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.REJECTED).build());
 
-		if(scheduledPaymentReq.isPresent()) {
+		if (scheduledPaymentReq.isPresent()) {
 			paymentRequestRepo.save(scheduledPaymentReq.get().toBuilder().status(DropRequestStatus.COMPLETE).build());
 		}
 		if (latestPaymentReq.getContactEmail() != null) {
@@ -302,20 +340,18 @@ public class AirDropSchedulerImpl {
 
 	private void markScheduleComplete(DropScheduleEnt sched, Optional<PaymentRequestEnt> scheduledPaymentReq,
 			List<DropScheduleRunEnt> scheduleRuns) {
-		dropScheduleRepo
-				.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.COMPLETE).build());
+		dropScheduleRepo.save(sched.toBuilder().dropScheduleStatus(DropScheduleStatus.COMPLETE).build());
 
 		if (scheduledPaymentReq.isEmpty() || scheduleRuns.isEmpty()) {
 			return;
 		}
 
 		paymentRequestRepo.save(scheduledPaymentReq.get().toBuilder().status(DropRequestStatus.COMPLETE).build());
-		
-		
+
 		StringBuilder sb = new StringBuilder();
 		for (DropScheduleRunEnt run : scheduleRuns) {
-			sb.append("<br><a href='https://strategyengine.one/#/airdropdetails?dropRequestId="
-					+ run.getDropRequestId() + "'>Drop Details "+run.getDropRequestId()+ "</a>");
+			sb.append("<br><a href='https://strategyengine.one/#/airdropdetails?dropRequestId=" + run.getDropRequestId()
+					+ "'>Drop Details " + run.getDropRequestId() + "</a>");
 		}
 
 		if (scheduledPaymentReq.get().getContactEmail() != null) {

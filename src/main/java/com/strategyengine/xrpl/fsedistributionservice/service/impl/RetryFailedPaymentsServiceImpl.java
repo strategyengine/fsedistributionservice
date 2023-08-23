@@ -88,6 +88,7 @@ public class RetryFailedPaymentsServiceImpl implements RetryFailedPaymentsServic
 					|| DropType.GLOBALID_SPECIFICADDRESSES == p.getDropType()) {
 				retryPayment = xrplService
 						.sendFsePayment(FsePaymentRequest.builder().agreeFee(true).amount(p.getAmount())
+								.memo(p.getMemo())
 								.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
 								.fromPrivateKey(retryPaymentRequest.getFromPrivateKey())
 								.fromSigningPublicKey(retryPaymentRequest.getFromSigningPublicKey())
@@ -105,6 +106,7 @@ public class RetryFailedPaymentsServiceImpl implements RetryFailedPaymentsServic
 			} else {
 				retryPayment = xrplService.sendFsePaymentToTrustlines(
 						FsePaymentTrustlinesRequest.builder().agreeFee(true).amount(p.getAmount())
+								.memo(p.getMemo())
 								.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
 								.fromPrivateKey(retryPaymentRequest.getFromPrivateKey())
 								.fromSigningPublicKey(retryPaymentRequest.getFromSigningPublicKey())

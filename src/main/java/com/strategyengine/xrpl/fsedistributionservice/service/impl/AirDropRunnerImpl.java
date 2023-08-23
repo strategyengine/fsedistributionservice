@@ -165,6 +165,7 @@ public class AirDropRunnerImpl {
 				.fromClassicAddress(p.getFromClassicAddress()).fromPrivateKey(p.getFromPrivateKey())
 				.paymentType(p.getPaymentType()).maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction())
 				.useBlacklist(p.getUseBlacklist())
+				.memo(p.getMemo())
 				.fromSigningPublicKey(p.getFromSigningPublicKey()).build();
 		DropRecipientEnt paidRecipient = paymentService.allowPayment(payment, recipient);
 

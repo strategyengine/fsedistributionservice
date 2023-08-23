@@ -31,6 +31,7 @@ public class EmailServiceImpl implements EmailService {
 		}
 		try {
 	
+		
 			MimeMessage message = mailSender.createMimeMessage();
 
 			message.setFrom(new InternetAddress(emailAddress));
@@ -38,8 +39,11 @@ public class EmailServiceImpl implements EmailService {
 			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
 
 			message.setSubject(subject);
-
+			
 			message.setContent(htmlBody, "text/html");
+			
+			log.info("Sending email to:{} subject:{} body:{}", to, subject, htmlBody);
+			
 			mailSender.send(message);
 
 		} catch (Exception e) {

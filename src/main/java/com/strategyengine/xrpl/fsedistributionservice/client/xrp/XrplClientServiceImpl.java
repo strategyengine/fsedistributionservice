@@ -40,6 +40,8 @@ import org.xrpl.xrpl4j.model.transactions.CurrencyAmount;
 import org.xrpl.xrpl4j.model.transactions.Hash256;
 import org.xrpl.xrpl4j.model.transactions.ImmutableTrustSet;
 import org.xrpl.xrpl4j.model.transactions.IssuedCurrencyAmount;
+import org.xrpl.xrpl4j.model.transactions.Memo;
+import org.xrpl.xrpl4j.model.transactions.MemoWrapper;
 import org.xrpl.xrpl4j.model.transactions.OfferCancel;
 import org.xrpl.xrpl4j.model.transactions.Payment;
 import org.xrpl.xrpl4j.model.transactions.Transaction;
@@ -419,10 +421,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 				return sendFSEPaymentAttempt(paymentRequest, recipient, attempt);
 			}
 
+
 			Payment payment = Payment.builder().account(Address.of(fromClassicAddress)).amount(currencyAmount)
 					.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
 					.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
-					.lastLedgerSequence(lastLedgerSequence).build();
+					.lastLedgerSequence(lastLedgerSequence)
+					.addMemos( paymentRequest.getMemo()!=null ? MemoWrapper.builder().memo(Memo.withPlaintext( paymentRequest.getMemo()).build()).build(): null)
+					.build();
 
 			if (destinationTag != null) {
 				payment = Payment.builder().account(Address.of(fromClassicAddress))

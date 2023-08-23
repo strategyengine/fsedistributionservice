@@ -96,6 +96,7 @@ public class HungPopulatingCheckSchedulerImpl implements HungPopulatingCheckSche
 		
 		
 		PaymentRequestEnt resubmitted = xrplService.sendFsePaymentToTrustlines(FsePaymentTrustlinesRequest.builder()
+				.memo(p.getMemo())
 				.maxBalance(p.getMaxBalance()!=null? Double.valueOf(p.getMaxBalance()) : null)
 				.maximumTrustlines(p.getMaximumTrustlines())
 				.minBalance(p.getMinBalance()!=null ? Double.valueOf(p.getMinBalance()) : null)
@@ -129,6 +130,7 @@ public class HungPopulatingCheckSchedulerImpl implements HungPopulatingCheckSche
 		List<String> recipAdds = recipients.stream().map(r -> r.getAddress()).collect(Collectors.toList());
 		
 		PaymentRequestEnt resubmitted = xrplService.sendFsePayment(FsePaymentRequest.builder().agreeFee(true).amount(p.getAmount())
+				.memo(p.getMemo())
 				.currencyName(p.getCurrencyName()).fromClassicAddress(p.getFromClassicAddress())
 				.fromPrivateKey(p.getFromPrivateKey()).fromSigningPublicKey(p.getFromSigningPublicKey())
 				.globalIdVerified(DropType.GLOBALID.equals(p.getDropType())

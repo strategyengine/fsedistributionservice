@@ -143,5 +143,7 @@ public class PaymentRequestEnt {
 	
 	@Column(name = "AUTO_APPROVE")
 	private Boolean autoApprove;
-	
+
+	@Column(name = "MEMO")
+	private String memo;
 }

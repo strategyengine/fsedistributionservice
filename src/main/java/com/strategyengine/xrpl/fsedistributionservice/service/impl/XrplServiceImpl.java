@@ -304,6 +304,7 @@ public class XrplServiceImpl implements XrplService {
 		}
 
 		PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder()
+				.memo(paymentRequestPre.getMemo())
 				.contactEmail(paymentRequestPre.getEmail()).populateEnvironment(environment)
 				.amount(paymentRequest.getAmount().trim()).createDate(now())
 				.currencyName(paymentRequestPre.getCurrencyName().trim()).currencyNameForProcess(currency)
@@ -590,7 +591,8 @@ public class XrplServiceImpl implements XrplService {
 		String currencyNameForProcess = currencyHexService.fixCurrencyCode(paymentRequestPre.getCurrencyName().trim());
 		FsePaymentTrustlinesRequest p = paymentRequestPre.toBuilder().currencyName(currencyNameForProcess).build();
 
-		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
+		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder()
+				.memo(paymentRequestPre.getMemo()).minBalance(
 				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
 				.contactEmail(paymentRequestPre.getEmail())
 				.startTime(paymentRequestPre.getStartTime() != null ? paymentRequestPre.getStartTime() : new Date())
@@ -816,7 +818,9 @@ public class XrplServiceImpl implements XrplService {
 		String currencyNameForProcess = currencyHexService.fixCurrencyCode(paymentRequestPre.getCurrencyName().trim());
 		FsePaymentTrustlinesRequest p = paymentRequestPre.toBuilder().currencyName(currencyNameForProcess).build();
 
-		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder().minBalance(
+		final PaymentRequestEnt paymentRequestEnt = paymentRequestRepo.save(PaymentRequestEnt.builder()
+				.memo(paymentRequestPre.getMemo())
+				.minBalance(
 				paymentRequestPre.getMinBalance() != null ? String.valueOf(paymentRequestPre.getMinBalance()) : null)
 				.contactEmail(paymentRequestPre.getEmail())
 				.maxBalance(

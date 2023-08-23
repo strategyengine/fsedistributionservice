@@ -28,7 +28,7 @@ public class XrpWalletGenerator {
 		Wallet wallet = null;
 		String seed = null;
 
-		for (int i = 0; i < 100000000; i++) {
+		for (int i = 0; i < 10; i++) {
 			seed = DefaultKeyPairService.getInstance().generateSeed();
 			wallet = new XrpWalletGenerator().generateWallet(seed);
 			String add = wallet.classicAddress().value();

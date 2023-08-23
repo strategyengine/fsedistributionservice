@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +23,7 @@ import org.xrpl.xrpl4j.wallet.Wallet;
 import org.xrpl.xrpl4j.wallet.WalletFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.BaseEncoding;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrpScanClient;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
@@ -68,7 +70,6 @@ public class ValidationServiceImpl implements ValidationService {
 	@PostConstruct
 	public void init() throws Exception {
 
-
 		try (InputStream inputStream = getClass().getResourceAsStream("/kycbypass.txt");
 				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 			kycBypass = reader.lines().collect(Collectors.toSet());
@@ -95,6 +96,27 @@ public class ValidationServiceImpl implements ValidationService {
 		return true;
 	}
 
+	// <p>The Memos field is limited to no more than 1 KB in size (when serialized
+	// in binary format).</p>
+	protected void validateMemo(String m) {
+
+		try {
+			if (m == null) {
+				return;
+			}
+			String e = BaseEncoding.base16().encode(m.getBytes(StandardCharsets.UTF_8));
+
+			if (m.length() > 500 || e.length() > 500) {
+				throw new BadRequestException("The Memo is too long");
+			}
+		} catch (Exception e) {
+			log.warn("Invalid memo - request rejeted " + e.getMessage());
+			throw new BadRequestException("Memo is invavlid!");
+
+		}
+
+	}
+
 	@Override
 	public void validateAirdropNotAlreadyQueuedForIssuer(String issuingAddress) {
 
@@ -113,7 +135,8 @@ public class ValidationServiceImpl implements ValidationService {
 				.status(DropRequestStatus.PENDING_REVIEW).trustlineIssuerClassicAddress(issuingAddress).build())));
 		if (!payments.isEmpty()) {
 			throw new BadRequestException(
-					"There is already an airdrop in progress or pending review for the issuing address :" + issuingAddress
+					"There is already an airdrop in progress or pending review for the issuing address :"
+							+ issuingAddress
 							+ ".  Concurrent drops from the same issuer or sending address are not permitted.");
 
 		}
@@ -218,8 +241,8 @@ public class ValidationServiceImpl implements ValidationService {
 					"Snapshot Issuer Address");
 		}
 
-		if(payment.getToClassicAddresses()!=null) {
-			//coult be null if an NFT issuer was entered
+		if (payment.getToClassicAddresses() != null) {
+			// coult be null if an NFT issuer was entered
 			payment.getToClassicAddresses().stream().forEach(a -> validateClassicAddress(a));
 		}
 		validateXAddress(payment.getFromPrivateKey());
@@ -235,22 +258,21 @@ public class ValidationServiceImpl implements ValidationService {
 				payment.getFromSigningPublicKey());
 
 		if (!StringUtils.isEmpty(payment.getNftIssuingAddress())) {
-			validateClassicAddressAccountLookup(payment.getNftIssuingAddress(),
-					"NFT Issuer Address");
+			validateClassicAddressAccountLookup(payment.getNftIssuingAddress(), "NFT Issuer Address");
 		}
 
 		validateToClassicAddressOrNftIssuerPopulated(payment.getToClassicAddresses(), payment.getNftIssuingAddress());
-	
+		validateMemo(payment.getMemo());
 	}
 
 	private void validateToClassicAddressOrNftIssuerPopulated(List<String> toClassicAddresses,
 			String nftIssuingAddress) {
-		if(toClassicAddresses == null || toClassicAddresses.isEmpty()) {
-			if(nftIssuingAddress == null) {
+		if (toClassicAddresses == null || toClassicAddresses.isEmpty()) {
+			if (nftIssuingAddress == null) {
 				throw new BadRequestException("Either specific addresses or and NFT issuing address must be populated");
 			}
 		}
-		
+
 	}
 
 	private void validateDecimal(String val, String field) {
@@ -343,6 +365,8 @@ public class ValidationServiceImpl implements ValidationService {
 
 		validateFromAddressMatchesKeys(payment.getFromClassicAddress(), payment.getFromPrivateKey(),
 				payment.getFromSigningPublicKey());
+		
+		validateMemo(payment.getMemo());
 	}
 
 	private void validateNotFSEorSSEImposter(@NonNull String currencyName,
@@ -422,7 +446,8 @@ public class ValidationServiceImpl implements ValidationService {
 		}
 
 		if (Double.valueOf(fromAddressTrustLine.get().getBalance()) < (Double.valueOf(amount) * size)) {
-			throw new BadRequestException(String.format("The from address (%s) does not have enough %s tokens to send %s to each of the %s addresses.",
+			throw new BadRequestException(String.format(
+					"The from address (%s) does not have enough %s tokens to send %s to each of the %s addresses.",
 					fromAddress, currencyName, amount, size));
 		}
 	}

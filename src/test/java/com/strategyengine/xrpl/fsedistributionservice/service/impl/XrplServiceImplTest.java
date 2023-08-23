@@ -320,7 +320,8 @@ public class XrplServiceImplTest {
 				.agreeFee(true).fromSigningPublicKey(signingKey).fromClassicAddress(classicAddress).amount(amount)
 				.build();
 
-		PaymentRequestEnt paymentRequestEnt = PaymentRequestEnt.builder().minBalance(
+		PaymentRequestEnt paymentRequestEnt = PaymentRequestEnt.builder()
+				.memo(request.getMemo()).minBalance(
 				request.getMinBalance() != null ? String.valueOf(request.getMinBalance()) : null)
 				.maxBalance(
 						request.getMaxBalance() != null ? String.valueOf(request.getMaxBalance())
