@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -127,7 +128,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 		try {
 
 			AccountOffersResult offersRslt = xrplClient1
-					.accountOffers(AccountOffersRequestParams.builder().account( Address.of(address)).build());
+					.accountOffers(AccountOffersRequestParams.builder().account(Address.of(address)).build());
 
 			List<SubmitResult<Transaction>> results = offersRslt.offers().stream()
 					.map(o -> cancelOpenOffer(o, Address.of(address), pubKey, privKey)).collect(Collectors.toList());
@@ -421,13 +422,22 @@ public class XrplClientServiceImpl implements XrplClientService {
 				return sendFSEPaymentAttempt(paymentRequest, recipient, attempt);
 			}
 
+			Payment payment = null;
+			if (Strings.isBlank(paymentRequest.getMemo())) {
 
-			Payment payment = Payment.builder().account(Address.of(fromClassicAddress)).amount(currencyAmount)
-					.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
-					.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
-					.lastLedgerSequence(lastLedgerSequence)
-					.addMemos( paymentRequest.getMemo()!=null ? MemoWrapper.builder().memo(Memo.withPlaintext( paymentRequest.getMemo()).build()).build(): null)
-					.build();
+				payment = Payment.builder().account(Address.of(fromClassicAddress)).amount(currencyAmount)
+						.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
+						.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
+						.lastLedgerSequence(lastLedgerSequence).build();
+			} else {
+				payment = Payment.builder().account(Address.of(fromClassicAddress)).amount(currencyAmount)
+						.destination(Address.of(toClassicAddress)).sequence(fromAccount.accountData().sequence())
+						.fee(openLedgerFee).signingPublicKey(paymentRequest.getFromSigningPublicKey())
+						.lastLedgerSequence(lastLedgerSequence).addMemos(MemoWrapper.builder()
+								.memo(Memo.withPlaintext(paymentRequest.getMemo()).build()).build())
+						.build();
+
+			}
 
 			if (destinationTag != null) {
 				payment = Payment.builder().account(Address.of(fromClassicAddress))

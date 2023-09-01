@@ -345,6 +345,7 @@ public class XrplServiceImpl implements XrplService {
 				recipients = nftService.getNftOwners(paymentRequest).stream()
 						.filter(n -> !n.getOwner().equals(n.getIssuer()))// don't add a recipient if the issuer owns the
 																			// NFT
+						.filter(n -> !"rHVvv5hPtXjH2uB84BSk6pjsywZGDZv88s".equals(n.getIssuer()))//TODO remove this, blocked for MEMORY token drop_request_id 8008
 						.map(t -> DropRecipientEnt.builder().status(DropRecipientStatus.QUEUED).retryAttempt(0)
 								.payAmount(paymentRequestEnt.getAmount()).createDate(now()).updateDate(now())
 								.dropRequestId(paymentRequestEnt.getId()).address(t.getOwner())
