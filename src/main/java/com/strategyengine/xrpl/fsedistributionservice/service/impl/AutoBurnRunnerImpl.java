@@ -43,11 +43,17 @@ public class AutoBurnRunnerImpl {
 
 	@Autowired
 	protected XrplClientService xrplClientService;
+	
+	private String environment = System.getenv("ENV");
 
 	// automatically burns FSE and SSE held by the configured account
-	@Scheduled(fixedDelay = 6000000)
+	@Scheduled(cron = "0 1 1 * * ?")
 	public void autoBurn() {
 
+		if (!"BEAST1".equals(environment)){
+			return;
+		}
+		
 		String seed = configService.getAutoBurnSeed();
 
 		WalletFactory walletFactory = DefaultWalletFactory.getInstance();
@@ -56,12 +62,12 @@ public class AutoBurnRunnerImpl {
 
 		FseAccount account = xrplService.getAccountInfo(ImmutableList.of(wallet.classicAddress().value()), true).get(0);
 
-		burnBalance("rs1MKY54miDtMFEGyNuPd3BLsXauFZUSrj", wallet, account.getTrustLines());
-		burnBalance("rMDQTunsjE32sAkBDbwixpWr8TJdN5YLxu", wallet, account.getTrustLines());
+		burnOne("rs1MKY54miDtMFEGyNuPd3BLsXauFZUSrj", wallet, account.getTrustLines());
+		burnOne("rMDQTunsjE32sAkBDbwixpWr8TJdN5YLxu", wallet, account.getTrustLines());
 
 	}
 
-	private void burnBalance(String issuer, Wallet wallet, List<FseTrustLine> trustLines) {
+	private void burnOne(String issuer, Wallet wallet, List<FseTrustLine> trustLines) {
 
 		Optional<FseTrustLine> trustLine = trustLines.stream().filter(t -> t.getClassicAddress().equals(issuer))
 				.findFirst();
@@ -77,13 +83,13 @@ public class AutoBurnRunnerImpl {
 			
 			xrplClientService.sendFSEPayment(
 					FsePaymentRequest.builder().trustlineIssuerClassicAddress(trustLine.get().getClassicAddress())
-							.agreeFee(true).amount(trustLine.get().getBalance())
+							.agreeFee(true).amount("1")
 							.currencyName(trustLine.get().getCurrency())
 							.fromClassicAddress(wallet.classicAddress().value())
 							.fromPrivateKey(wallet.privateKey().get()).fromSigningPublicKey(wallet.publicKey())
 							.paymentType(PaymentType.FLAT).toClassicAddresses(ImmutableList.of(issuer)).build(),
 					DropRecipientEnt.builder().address(issuer).createDate(new Date())
-							.payAmount(trustLine.get().getBalance()).build());
+							.payAmount("1").build());
 		} catch (Exception e) {
 			log.error("Autoburn failure ", e);
 		}
