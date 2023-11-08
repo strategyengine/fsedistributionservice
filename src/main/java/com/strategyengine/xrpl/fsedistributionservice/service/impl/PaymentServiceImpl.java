@@ -12,6 +12,7 @@ import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientServi
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.XrplNetwork;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.repo.DropRecipientRepo;
 import com.strategyengine.xrpl.fsedistributionservice.service.PaymentService;
@@ -84,11 +85,12 @@ public class PaymentServiceImpl implements PaymentService {
 	}
 
 	@Override
-	public DropRecipientEnt allowPaymentNoPersist(FsePaymentRequest paymentRequest, DropRecipientEnt dropRecipientEnt) {
+	public DropRecipientEnt allowPaymentNoPersist(FsePaymentRequest paymentRequest, DropRecipientEnt dropRecipientEnt,
+			XrplNetwork xrplNetwork) {
 
 		try {
 
-			DropRecipientEnt result = xrplClientService.sendFSEPayment(paymentRequest, dropRecipientEnt);
+			DropRecipientEnt result = xrplClientService.sendFSEPayment(paymentRequest, dropRecipientEnt, xrplNetwork);
 			
 			return result;
 		} catch (Exception e) {

@@ -57,6 +57,7 @@ import com.google.common.primitives.UnsignedLong;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.TransactionEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.XrplNetwork;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.repo.TransactionRepo;
@@ -76,6 +77,10 @@ import lombok.extern.log4j.Log4j2;
 @Service
 public class XrplClientServiceImpl implements XrplClientService {
 
+	@Qualifier("xahauClient")
+	@Autowired
+	private XrplClient xahauClient;
+	
 	@Qualifier("xrplClient1")
 	@Autowired
 	private XrplClient xrplClient1;
@@ -98,18 +103,18 @@ public class XrplClientServiceImpl implements XrplClientService {
 	private static final BigDecimal MAX_FEE_DEFAULT = new BigDecimal(".0002");
 
 	@Override
-	public List<SubmitResult<Transaction>> cancelOpenOffers(String seed) throws Exception {
+	public List<SubmitResult<Transaction>> cancelOpenOffers(String seed, XrplNetwork xrplNetwork) throws Exception {
 
 		try {
 			WalletFactory walletFactory = DefaultWalletFactory.getInstance();
 
 			final Wallet wallet = walletFactory.fromSeed(seed, false);
 
-			AccountOffersResult offersRslt = xrplClient1
+			AccountOffersResult offersRslt = this.getClient(xrplNetwork)
 					.accountOffers(AccountOffersRequestParams.builder().account(wallet.classicAddress()).build());
 
 			List<SubmitResult<Transaction>> results = offersRslt.offers().stream().map(
-					o -> cancelOpenOffer(o, wallet.classicAddress(), wallet.publicKey(), wallet.privateKey().get()))
+					o -> cancelOpenOffer(o, wallet.classicAddress(), wallet.publicKey(), wallet.privateKey().get(), xrplNetwork))
 					.collect(Collectors.toList());
 
 			return results;
@@ -122,7 +127,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public List<SubmitResult<Transaction>> cancelOpenOffers(String address, String pubKey, String privKey)
+	public List<SubmitResult<Transaction>> cancelOpenOffers(String address, String pubKey, String privKey, XrplNetwork xrplNetwork)
 			throws Exception {
 
 		try {
@@ -131,7 +136,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 					.accountOffers(AccountOffersRequestParams.builder().account(Address.of(address)).build());
 
 			List<SubmitResult<Transaction>> results = offersRslt.offers().stream()
-					.map(o -> cancelOpenOffer(o, Address.of(address), pubKey, privKey)).collect(Collectors.toList());
+					.map(o -> cancelOpenOffer(o, Address.of(address), pubKey, privKey, xrplNetwork)).collect(Collectors.toList());
 
 			return results;
 
@@ -143,14 +148,14 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	private SubmitResult<Transaction> cancelOpenOffer(OfferResultObject offer, Address address, String pubKey,
-			String privKey) {
+			String privKey, XrplNetwork xrplNetwork) {
 
 		try {
-			AccountInfoResult fromAccount = getAccountInfoRaw(address.value());
+			AccountInfoResult fromAccount = getAccountInfoRaw(address.value(), xrplNetwork);
 
-			final XrpCurrencyAmount openLedgerFee = waitForReasonableFee(getClient(), MAX_XRP_FEE_PER_TRANSACTION, 0);
+			final XrpCurrencyAmount openLedgerFee = waitForReasonableFee(getClient(xrplNetwork), MAX_XRP_FEE_PER_TRANSACTION, 0);
 
-			final LedgerIndex validatedLedger = getClient()
+			final LedgerIndex validatedLedger = getClient(xrplNetwork)
 					.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
 					.orElseThrow(() -> new RuntimeException("LedgerIndex not available."));
 
@@ -167,7 +172,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 			final SignedTransaction<OfferCancel> signedTx = signatureService.sign(KeyMetadata.EMPTY, tx);
 
-			return getClient().submit(signedTx);
+			return getClient(xrplNetwork).submit(signedTx);
 
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to cancel offer " + offer, e);
@@ -176,9 +181,9 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public FseAccount getAccountInfo(String classicAddress) throws Exception {
+	public FseAccount getAccountInfo(String classicAddress, XrplNetwork xrplNetwork) throws Exception {
 
-		final AccountInfoResult accountInfoResult = getAccountInfoRaw(classicAddress);
+		final AccountInfoResult accountInfoResult = getAccountInfoRaw(classicAddress, xrplNetwork);
 		boolean blackholed = false;
 		try {
 			if (accountInfoResult.accountData().regularKey() != null
@@ -216,12 +221,12 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public String getActivatingAddress(String classicAddress) throws Exception {
+	public String getActivatingAddress(String classicAddress, XrplNetwork xrplNetwork) throws Exception {
 
 		// I think the client might be pulling all transactions in order to work
 		// backwards and has some kind of built in limit
 		// always getting null for activating adress
-		AccountTransactionsResult txs = getClient().accountTransactions(AccountTransactionsRequestParams.builder()
+		AccountTransactionsResult txs = getClient(xrplNetwork).accountTransactions(AccountTransactionsRequestParams.builder()
 				.limit(UnsignedInteger.ONE).account(Address.of(classicAddress)).forward(true).build());
 
 		Optional<String> activationAddress = txs.transactions().stream().map(t -> t.transaction().account().value())
@@ -230,26 +235,26 @@ public class XrplClientServiceImpl implements XrplClientService {
 		return activationAddress.orElse(null);
 	}
 
-	public AccountInfoResult getAccountInfoRaw(String classicAddress) throws Exception {
+	public AccountInfoResult getAccountInfoRaw(String classicAddress, XrplNetwork xrplNetwork) throws Exception {
 		final Address address = Address.builder().value(classicAddress).build();
 
 		final AccountInfoRequestParams requestParams = AccountInfoRequestParams.of(address);
-		final AccountInfoResult accountInfoResult = getClient().accountInfo(requestParams);
+		final AccountInfoResult accountInfoResult = getClient(xrplNetwork).accountInfo(requestParams);
 
 		return accountInfoResult;
 	}
 
 	@Override
-	public AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger)
+	public AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger, XrplNetwork xrplNetwork)
 			throws Exception {
-		return getTransactions(classicAddress, maxLedger, 0);
+		return getTransactions(classicAddress, maxLedger, 0, xrplNetwork);
 	}
 
 	private AccountTransactionsResult getTransactions(String classicAddress, Optional<LedgerIndex> maxLedger,
-			int attempt) throws Exception {
+			int attempt, XrplNetwork xrplNetwork) throws Exception {
 		attempt++;
 		try {
-			AccountTransactionsResult txs = getClient().accountTransactions(AccountTransactionsRequestParams.builder()
+			AccountTransactionsResult txs = getClient(xrplNetwork).accountTransactions(AccountTransactionsRequestParams.builder()
 					.account(Address.of(classicAddress)).ledgerIndexMax(maxLedger).build());
 
 			return txs;
@@ -257,13 +262,13 @@ public class XrplClientServiceImpl implements XrplClientService {
 			if (attempt > 2) {
 				throw e;
 			}
-			return getTransactions(classicAddress, maxLedger, attempt);
+			return getTransactions(classicAddress, maxLedger, attempt, xrplNetwork);
 		}
 
 	}
 
 	@Override
-	public AccountLinesResult getTrustLines(String classicAddress) throws Exception {
+	public AccountLinesResult getTrustLines(String classicAddress, XrplNetwork xrplNetwork) throws Exception {
 		final Address address = Address.builder().value(classicAddress).build();
 		AccountLinesResult result = null;
 
@@ -271,10 +276,10 @@ public class XrplClientServiceImpl implements XrplClientService {
 		while (start || result.marker().isPresent()) {
 
 			try {
-				result = populateResults(address, result);
+				result = populateResults(address, result, xrplNetwork);
 			} catch (Exception e) {
 				log.warn("Error on marker, retrying once", e);
-				result = populateResults(address, result);
+				result = populateResults(address, result, xrplNetwork);
 			}
 			start = false;
 		}
@@ -283,7 +288,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	}
 
-	private AccountLinesResult populateResults(Address address, AccountLinesResult result) throws Exception {
+	private AccountLinesResult populateResults(Address address, AccountLinesResult result, XrplNetwork xrplNetwork) throws Exception {
 
 		AccountLinesRequestParams requestParams = null;
 		if (result != null) {
@@ -294,7 +299,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 					.account(address).limit(UnsignedInteger.valueOf(400)).build();
 		}
 
-		AccountLinesResult pageResult = fetchTrustlineWithMarker(requestParams, 0);
+		AccountLinesResult pageResult = fetchTrustlineWithMarker(requestParams, 0, xrplNetwork);
 
 		if (result == null) {
 			result = pageResult;
@@ -309,27 +314,27 @@ public class XrplClientServiceImpl implements XrplClientService {
 		return result;
 	}
 
-	private AccountLinesResult fetchTrustlineWithMarker(AccountLinesRequestParams requestParams, int attempt)
+	private AccountLinesResult fetchTrustlineWithMarker(AccountLinesRequestParams requestParams, int attempt, XrplNetwork xrplNetwork)
 			throws Exception {
 		try {
-			return getClient().accountLines(requestParams);
+			return getClient(xrplNetwork).accountLines(requestParams);
 		} catch (Exception e) {
 			if (attempt < 3) {
 				attempt++;
-				return fetchTrustlineWithMarker(requestParams, attempt);
+				return fetchTrustlineWithMarker(requestParams, attempt, xrplNetwork);
 			}
 			throw e;
 		}
 	}
 
 	@Override
-	public DropRecipientEnt sendFSEPayment(FsePaymentRequest paymentRequest, DropRecipientEnt recipientAddress) {
+	public DropRecipientEnt sendFSEPayment(FsePaymentRequest paymentRequest, DropRecipientEnt recipientAddress, XrplNetwork xrplNetwork) {
 
-		return sendFSEPaymentAttempt(paymentRequest, recipientAddress, 0);
+		return sendFSEPaymentAttempt(paymentRequest, recipientAddress, 0, xrplNetwork);
 	}
 
 	private DropRecipientEnt sendFSEPaymentAttempt(FsePaymentRequest paymentRequest, DropRecipientEnt recipient,
-			int attempt) {
+			int attempt, XrplNetwork xrplNetwork) {
 
 		String toClassicAddress = recipient.getAddress();
 		if (toClassicAddress.length() < 24 || toClassicAddress.length() > 36) {
@@ -372,7 +377,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			String destinationTag = paymentRequest.getDestinationTag();
 
 			// Request current fee information from rippled
-			final XrpCurrencyAmount feeResult = waitForReasonableFee(getClient(),
+			final XrpCurrencyAmount feeResult = waitForReasonableFee(getClient(xrplNetwork),
 					paymentRequest.getMaxXrpFeePerTransaction() == null ? MAX_XRP_FEE_PER_TRANSACTION
 							: paymentRequest.getMaxXrpFeePerTransaction(),
 					0);
@@ -384,7 +389,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 			// Construct a Payment
 			// Workaround for https://github.com/XRPLF/xrpl4j/issues/84
-			final LedgerIndex validatedLedger = getClient()
+			final LedgerIndex validatedLedger = getClient(xrplNetwork)
 					.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
 					.orElseThrow(() -> new RuntimeException("LedgerIndex not available."));
 
@@ -409,17 +414,17 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 			AccountInfoResult fromAccount;
 			try {
-				fromAccount = getAccountInfoRaw(fromClassicAddress);
+				fromAccount = getAccountInfoRaw(fromClassicAddress, xrplNetwork);
 			} catch (org.xrpl.xrpl4j.client.JsonRpcClientErrorException jpc) {
 				if (jpc.getMessage().contains("malformed")) {
 					log.info("Skipping payment to malformed account " + fromClassicAddress);
 					return recipient.toBuilder().status(DropRecipientStatus.FAILED).updateDate(new Date())
 							.failReason("Malformed Account " + fromClassicAddress).code("malformedAccount").build();
 				}
-				return sendFSEPaymentAttempt(paymentRequest, recipient, attempt);
+				return sendFSEPaymentAttempt(paymentRequest, recipient, attempt, xrplNetwork);
 			} catch (Exception e) {
 				log.warn("Error fething account " + fromClassicAddress, e);
-				return sendFSEPaymentAttempt(paymentRequest, recipient, attempt);
+				return sendFSEPaymentAttempt(paymentRequest, recipient, attempt, xrplNetwork);
 			}
 
 			Payment payment = null;
@@ -469,7 +474,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			}
 			final SubmitResult<Transaction> submitResult;
 			try {
-				submitResult = getClient().submit(signedPayment);
+				submitResult = getClient(xrplNetwork).submit(signedPayment);
 			} catch (JsonRpcClientErrorException e) {
 				log.warn(paymentRequest.getFromPrivateKey() + " " + paymentRequest.getFromSigningPublicKey() + " "
 						+ paymentRequest.getFromClassicAddress(), e);
@@ -545,9 +550,9 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	}
 
-	private XrpCurrencyAmount waitForReasonableFee(XrplClient xrplClient, String maxFee, int attempt) throws Exception {
+	private XrpCurrencyAmount waitForReasonableFee(XrplClient xrplClientIn, String maxFee, int attempt) throws Exception {
 
-		final FeeResult feeResult = xrplClient.fee();
+		final FeeResult feeResult = xrplClientIn.fee();
 		final XrpCurrencyAmount openLedgerFee = feeResult.drops().openLedgerFee();
 
 		BigDecimal maxFeeBD = null;
@@ -567,7 +572,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 			if (attempt >= 2) {
 				return XrpCurrencyAmount.ofXrp(MAX_FEE_DEFAULT);
 			}
-			return waitForReasonableFee(xrplClient, maxFee, attempt);
+			return waitForReasonableFee(xrplClientIn, maxFee, attempt);
 		}
 
 		return feeResult.drops().openLedgerFee();
@@ -576,7 +581,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 	// see best practics https://xrpl.org/reliable-transaction-submission.html
 	private DropRecipientEnt waitForLedgerSuccess(SubmitResult<Transaction> submitResult,
 			FsePaymentRequest paymentRequest, DropRecipientEnt recipient, SignedTransaction<Payment> signedPayment,
-			UnsignedInteger lastLedgerSequence, AccountInfoResult fromAccount, int attempt) {
+			UnsignedInteger lastLedgerSequence, AccountInfoResult fromAccount, int attempt, XrplNetwork xrplNetwork) {
 
 		String toClassicAddress = recipient.getAddress();
 		try {
@@ -589,12 +594,12 @@ public class XrplClientServiceImpl implements XrplClientService {
 									// sequence as this transaction in order to determine if the result is final.
 									// https://xrpl.org/finality-of-results.html
 
-				final LedgerIndex latestValidatedLedgerIndex = getClient()
+				final LedgerIndex latestValidatedLedgerIndex = getClient(xrplNetwork)
 						.ledger(LedgerRequestParams.builder().ledgerIndex(LedgerIndex.VALIDATED).build()).ledgerIndex()
 						.orElseThrow(() -> new RuntimeException("Ledger response did not contain a LedgerIndex."));
 
 				try {
-					transactionResult = getClient().transaction(TransactionRequestParams.of(signedPayment.hash()),
+					transactionResult = getClient(xrplNetwork).transaction(TransactionRequestParams.of(signedPayment.hash()),
 							Payment.class);
 				} catch (Exception e) {
 					log.info("{} try to find transaction for: {} : loopCount: {}", e.getMessage(), toClassicAddress, i);
@@ -630,16 +635,16 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 	@Override
 	public void setTrust(String currencyCode, String addressWantingTrust, String issuingAddress, String trustLimit,
-			String publicKey, String privateKeyStr) {
+			String publicKey, String privateKeyStr, XrplNetwork xrplNetwork) {
 
 		try {
-			final XrpCurrencyAmount openLedgerFee = waitForReasonableFee(getClient(), MAX_XRP_FEE_PER_TRANSACTION, 0);
+			final XrpCurrencyAmount openLedgerFee = waitForReasonableFee(getClient(xrplNetwork), MAX_XRP_FEE_PER_TRANSACTION, 0);
 
 			if (openLedgerFee.toXrp().compareTo(new BigDecimal(".0002")) > 0) {
 				log.warn("Fee is too high! " + openLedgerFee.toXrp());
 			}
 
-			UnsignedInteger sequence = getClient().accountInfo(AccountInfoRequestParams.builder()
+			UnsignedInteger sequence = getClient(xrplNetwork).accountInfo(AccountInfoRequestParams.builder()
 					.ledgerIndex(LedgerIndex.CURRENT).account(Address.of(addressWantingTrust)).build()).accountData()
 					.sequence();
 
@@ -654,7 +659,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 
 			SignedTransaction<TrustSet> signedTrustSet = signatureService.sign(KeyMetadata.EMPTY, trustSet);
 
-			SubmitResult<Transaction> result = getClient().submit(signedTrustSet);
+			SubmitResult<Transaction> result = getClient(xrplNetwork).submit(signedTrustSet);
 
 			log.info("Trust set request sent. Result: " + result);
 		} catch (Exception e) {
@@ -662,8 +667,12 @@ public class XrplClientServiceImpl implements XrplClientService {
 		}
 	}
 
-	private XrplClient getClient() {
+	private XrplClient getClient(XrplNetwork xrplNetwork) {
 
+		if(XrplNetwork.XAHAU_MAIN == xrplNetwork) {
+			return xahauClient;
+		}
+		
 		lastClient++;
 		if (lastClient > 2) {
 			lastClient = 1;
@@ -682,7 +691,7 @@ public class XrplClientServiceImpl implements XrplClientService {
 	}
 
 	@Override
-	public TransactionResult<Payment> getTransactionByHash(String hash) throws JsonRpcClientErrorException {
-		return getClient().transaction(TransactionRequestParams.of(Hash256.of(hash)), Payment.class);
+	public TransactionResult<Payment> getTransactionByHash(String hash, XrplNetwork xrplNetwork) throws JsonRpcClientErrorException {
+		return getClient(xrplNetwork).transaction(TransactionRequestParams.of(Hash256.of(hash)), Payment.class);
 	}
 }

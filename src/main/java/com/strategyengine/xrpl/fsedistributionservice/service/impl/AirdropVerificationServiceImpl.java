@@ -30,6 +30,7 @@ import com.strategyengine.xrpl.fsedistributionservice.entity.TransactionEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRecipientStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropRequestStatus;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.DropType;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.XrplNetwork;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseSort;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
@@ -112,7 +113,7 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 	@Transactional
 	@Override
 	public PaymentRequestEnt verifyDropComplete(PaymentRequestEnt paymentRequestInitial,
-			List<FseTransaction> transactions, boolean releaseLock) {
+			List<FseTransaction> transactions, boolean releaseLock, XrplNetwork xrplNetwork) {
 
 		try {
 
@@ -183,7 +184,7 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 
 			PaymentRequestEnt finalizedFeeCollected = collectFees(finalizedPaymentRequest,
 					dropRecipientRepo.findAll(Example.of(DropRecipientEnt.builder().status(DropRecipientStatus.VERIFIED)
-							.dropRequestId(paymentRequest.getId()).build())).size());
+							.dropRequestId(paymentRequest.getId()).build())).size(), xrplNetwork);
 
 			log.info("Finished Airdrop verification for UUID: {} paymentRequest ID: {}",
 					finalizedFeeCollected.getLockUuid(), finalizedFeeCollected.getId());
@@ -399,7 +400,7 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 
 	}
 
-	protected PaymentRequestEnt collectFees(PaymentRequestEnt p, int totalVerifiedRecipients) {
+	protected PaymentRequestEnt collectFees(PaymentRequestEnt p, int totalVerifiedRecipients, XrplNetwork xrplNetwork) {
 
 		if (p.getId() <= MIN_DROP_REQUEST_ID_TO_COLLECT_FEES) {
 			// don't charge until we can switch over to FSE payments
@@ -456,7 +457,8 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 							.fromSigningPublicKey(p.getFromSigningPublicKey())
 							.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).build(),
 					SERVICE_FEE_ADDRESS.toBuilder().id(0l).dropRequestId(p.getId()).createDate(now())
-							.payAmount(String.valueOf(feePortionArdy.stripTrailingZeros())).updateDate(now()).build());
+							.payAmount(String.valueOf(feePortionArdy.stripTrailingZeros())).updateDate(now()).build(),
+							xrplNetwork);
 
 			paymentService.allowPaymentNoPersist(
 					FsePaymentRequest.builder().trustlineIssuerClassicAddress(FSE_ISSUING_ADDRESS).currencyName("FSE")
@@ -465,7 +467,8 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 							.fromSigningPublicKey(p.getFromSigningPublicKey())
 							.maxXrpFeePerTransaction(p.getMaxXrpFeePerTransaction()).build(),
 					BURN_ISSUER_FSE_ADDRESS.toBuilder().id(0l).dropRequestId(p.getId()).createDate(now())
-							.payAmount(String.valueOf(feePortionBurn.stripTrailingZeros())).updateDate(now()).build());
+							.payAmount(String.valueOf(feePortionBurn.stripTrailingZeros())).updateDate(now()).build(),
+							xrplNetwork);
 
 			BigDecimal totalPaid = remainingToCollect.add(p.getFeesPaid() == null ? BigDecimal.ZERO
 					: new BigDecimal(p.getFeesPaid()).setScale(2, RoundingMode.DOWN));

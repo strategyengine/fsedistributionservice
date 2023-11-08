@@ -28,13 +28,13 @@ public class XrpWalletGenerator {
 		Wallet wallet = null;
 		String seed = null;
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 100000000; i++) {
 			seed = DefaultKeyPairService.getInstance().generateSeed();
 			wallet = new XrpWalletGenerator().generateWallet(seed);
 			String add = wallet.classicAddress().value();
 	
 
-			if (add.toLowerCase().endsWith("stitches")||add.endsWith("NFT")||add.endsWith("NFTst")) {
+			if (add.toLowerCase().endsWith("wood")) {
 				final Address classicAddress = wallet.classicAddress();
 
 				final XAddress xAddress = wallet.xAddress();

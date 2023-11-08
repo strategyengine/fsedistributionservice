@@ -63,6 +63,18 @@ public class FseDistributionServiceConfig {
 	    
 	    return mailSender;
 	}
+	
+	//testnet - https://hooks-testnet-v3.xrpl-labs.com
+	@Bean(name="xahauClient")
+	public XrplClient xahauClient() throws Exception {
+		final HttpUrl url = HttpUrl.get("https://hooks-testnet-v3.xrpl-labs.com/");
+		XrplClient client = null;
+	
+		client = fetchWithRetry(url, 0);
+		
+		return client;
+	}
+	
 
 	@Bean(name = "xrplClient1")
 	public XrplClient xrplClient1() throws Exception {

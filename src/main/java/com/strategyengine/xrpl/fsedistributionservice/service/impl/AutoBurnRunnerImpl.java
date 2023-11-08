@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
 import com.strategyengine.xrpl.fsedistributionservice.entity.DropRecipientEnt;
 import com.strategyengine.xrpl.fsedistributionservice.entity.types.PaymentType;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.XrplNetwork;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseAccount;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTrustLine;
@@ -54,6 +55,8 @@ public class AutoBurnRunnerImpl {
 			return;
 		}
 		
+		XrplNetwork xrplNetwork = XrplNetwork.XRPL_MAIN;
+		
 		String seed = configService.getAutoBurnSeed();
 
 		WalletFactory walletFactory = DefaultWalletFactory.getInstance();
@@ -62,12 +65,12 @@ public class AutoBurnRunnerImpl {
 
 		FseAccount account = xrplService.getAccountInfo(ImmutableList.of(wallet.classicAddress().value()), true).get(0);
 
-		burnOne("rs1MKY54miDtMFEGyNuPd3BLsXauFZUSrj", wallet, account.getTrustLines());
-		burnOne("rMDQTunsjE32sAkBDbwixpWr8TJdN5YLxu", wallet, account.getTrustLines());
+		burnOne("rs1MKY54miDtMFEGyNuPd3BLsXauFZUSrj", wallet, account.getTrustLines(), xrplNetwork);
+		burnOne("rMDQTunsjE32sAkBDbwixpWr8TJdN5YLxu", wallet, account.getTrustLines(), xrplNetwork);
 
 	}
 
-	private void burnOne(String issuer, Wallet wallet, List<FseTrustLine> trustLines) {
+	private void burnOne(String issuer, Wallet wallet, List<FseTrustLine> trustLines, XrplNetwork xrplNetwork) {
 
 		Optional<FseTrustLine> trustLine = trustLines.stream().filter(t -> t.getClassicAddress().equals(issuer))
 				.findFirst();
@@ -89,7 +92,7 @@ public class AutoBurnRunnerImpl {
 							.fromPrivateKey(wallet.privateKey().get()).fromSigningPublicKey(wallet.publicKey())
 							.paymentType(PaymentType.FLAT).toClassicAddresses(ImmutableList.of(issuer)).build(),
 					DropRecipientEnt.builder().address(issuer).createDate(new Date())
-							.payAmount("1").build());
+							.payAmount("1").build(), xrplNetwork);
 		} catch (Exception e) {
 			log.error("Autoburn failure ", e);
 		}

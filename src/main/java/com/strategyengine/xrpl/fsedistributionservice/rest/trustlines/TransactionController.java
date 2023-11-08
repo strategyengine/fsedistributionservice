@@ -6,13 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.xrpl.xrpl4j.model.client.transactions.SubmitResult;
 import org.xrpl.xrpl4j.model.transactions.Transaction;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.io.BaseEncoding;
 import com.strategyengine.xrpl.fsedistributionservice.client.xrp.XrplClientService;
+import com.strategyengine.xrpl.fsedistributionservice.entity.types.XrplNetwork;
 import com.strategyengine.xrpl.fsedistributionservice.model.FseTransaction;
 import com.strategyengine.xrpl.fsedistributionservice.service.AirdropSummaryService;
 import com.strategyengine.xrpl.fsedistributionservice.service.AnalysisService;
@@ -67,11 +68,12 @@ public class TransactionController {
 	@ApiOperation(value = "Cancels all open offers for a seed")
 	@RequestMapping(value = "/transactions/offers/cancel/{seed}", method = RequestMethod.POST)
 	public List<SubmitResult<Transaction>> cancelOpenOffers(
-			@ApiParam(value = "seed.", required = true) @PathVariable("seed") String seed) {
+			@ApiParam(value = "seed.", required = true) @PathVariable("seed") String seed,
+			@ApiParam(value = "xrplNetwork", required = false) @RequestParam("xrplNetwork") XrplNetwork xrplNetwork) {
 
 		try {
 			
-			return xrplClientService.cancelOpenOffers(seed);
+			return xrplClientService.cancelOpenOffers(seed, xrplNetwork!=null? xrplNetwork : XrplNetwork.XRPL_MAIN);
 			
 		} catch (Exception e) {
 			log.error(e);
@@ -87,11 +89,12 @@ public class TransactionController {
 	public List<SubmitResult<Transaction>> cancelOpenOffersKeys(
 			@ApiParam(value = "address", required = true) @PathVariable("address") String address,
 			@ApiParam(value = "privKey", required = true) @PathVariable("privKey") String privKey,
-			@ApiParam(value = "pubKey", required = true) @PathVariable("pubKey") String pubKey) {
+			@ApiParam(value = "pubKey", required = true) @PathVariable("pubKey") String pubKey,
+			@ApiParam(value = "xrplNetwork", required = false) @RequestParam("xrplNetwork") XrplNetwork xrplNetwork) {
 
 		try {
 		
-			return xrplClientService.cancelOpenOffers(address, privKey, pubKey);
+			return xrplClientService.cancelOpenOffers(address, privKey, pubKey, xrplNetwork!=null? xrplNetwork : XrplNetwork.XRPL_MAIN);
 			
 		} catch (Exception e) {
 			log.error(e);
