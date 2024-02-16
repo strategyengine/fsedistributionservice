@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.strategyengine.xrpl.fsedistributionservice.entity.PaymentRequestEnt;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentRequest;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentResult;
 import com.strategyengine.xrpl.fsedistributionservice.model.FsePaymentTrustlinesRequest;
@@ -75,8 +76,9 @@ public class TrustlinePaymentController {
 			paymentRequest.setDestinationTag(null);
 		}
 
-		xrplService.sendFsePayment(paymentRequest);
-		return ResponseEntity.ok().build();
+		PaymentRequestEnt paymentReq = xrplService.sendFsePayment(paymentRequest);
+		
+		return ResponseEntity.ok().header("fsepayid", String.valueOf(paymentReq.getId())).build();
 	}
 
 	@ApiOperation(value = "Distributes tokens to trustline holders.  Airdrop")
