@@ -212,8 +212,8 @@ public class AirdropVerificationServiceImplTest {
 				.build();
 
 		BigDecimal amountToPay = new BigDecimal(toPayAndBurn).multiply(new BigDecimal("2"));
-		BigDecimal burnFee = amountToPay.multiply(new BigDecimal(".001")).stripTrailingZeros();
-		BigDecimal ardyFee = amountToPay.multiply(new BigDecimal(".991")).stripTrailingZeros();
+		BigDecimal burnFee = amountToPay.multiply(new BigDecimal(".991")).stripTrailingZeros();
+		BigDecimal ardyFee = amountToPay.multiply(new BigDecimal(".001")).stripTrailingZeros();
 
 		sut.collectFees(p, size);
 
