@@ -443,8 +443,8 @@ public class AirdropVerificationServiceImpl implements AirdropVerificationServic
 			// remainingToCollect.divide(BigDecimal.valueOf(2l)); //half to Ardy, half to
 			// burn
 
-			BigDecimal feePortionBurn = remainingToCollect.multiply(new BigDecimal(".001")); // 90% burn; changed only burn 1%
-			BigDecimal feePortionArdy = remainingToCollect.multiply(new BigDecimal(".991")); // 10% Ardy
+			BigDecimal feePortionBurn = remainingToCollect.multiply(new BigDecimal(".991")); // 99% burn; 
+			BigDecimal feePortionArdy = remainingToCollect.multiply(new BigDecimal(".001")); // 1% Ardy
 
 			log.info(String.format("dropid:%s feePortionBurn:%s feePortionArdy:%s", p.getId(), feePortionBurn,
 					feePortionArdy));
