@@ -70,7 +70,7 @@ public class AirDropRunnerImpl {
 	// DO NOT MARK THIS METHOD TRANSACTIONAL we need other processes to see the
 	// lock_uuid
 	// fixedDelay millis - check every minute for a drop
-	@Scheduled(fixedDelay = 60000)
+	@Scheduled(fixedDelay = 6000)
 	public void runAirDrop() {
 
 		Optional<PaymentRequestEnt> adminPaymentRequestOpt = Optional.empty();

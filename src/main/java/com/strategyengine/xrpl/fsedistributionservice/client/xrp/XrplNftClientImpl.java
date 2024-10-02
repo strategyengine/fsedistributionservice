@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,8 +30,9 @@ import lombok.extern.log4j.Log4j2;
 @Service
 public class XrplNftClientImpl implements XrplNftClient {
 
-	private String url = "http://10.0.0.33:9030/nft/owners/";
-
+	@Value("${fsedistributionservice.xrplnft.url}")
+	private String url;
+	
 	@Autowired
 	private ObjectMapper objectMapper;
 
