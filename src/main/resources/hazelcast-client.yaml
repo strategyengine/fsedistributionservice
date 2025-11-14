@@ -1,5 +1,5 @@
 hazelcast-client:
   network:
     cluster-members:
-      - 192.168.1.143
+      - 192.168.100.122
       - cache
